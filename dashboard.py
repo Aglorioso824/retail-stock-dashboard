@@ -3,22 +3,22 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# Centered title
+# Centered main title
 st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>", unsafe_allow_html=True)
 
-# Display last data upload date if out_of_stock.csv exists
+# Center the Last Data Upload Date
 if os.path.exists("out_of_stock.csv"):
     last_upload_timestamp = os.path.getmtime("out_of_stock.csv")
     last_upload_date = datetime.fromtimestamp(last_upload_timestamp).strftime("%d/%m/%Y")
-    st.write(f"Last Data Upload Date: {last_upload_date}")
+    st.markdown(f"<p style='text-align: center;'>Last Data Upload Date: {last_upload_date}</p>", unsafe_allow_html=True)
 else:
-    st.write("No data uploaded yet.")
+    st.markdown("<p style='text-align: center;'>No data uploaded yet.</p>", unsafe_allow_html=True)
 
 # File uploader for Excel file
 uploaded_file = st.file_uploader("Upload your weekly Excel file (.xlsx)", type="xlsx")
 
 def process_data(df):
-    # Check required columns
+    # Check if the required columns are present
     required_columns = {'Retailer', 'SKU', 'Store', 'Quantity'}
     if not required_columns.issubset(df.columns):
         st.error("The file must have the columns: Retailer, SKU, Store, Quantity")
@@ -28,7 +28,6 @@ def process_data(df):
     selected_retailers = df['Retailer'].unique()[:5]
     df = df[df['Retailer'].isin(selected_retailers)]
     
-    # Main dashboards:
     # Out of Stock: stores with 0 units or less (grouped by Retailer and SKU)
     out_of_stock = df[df['Quantity'] <= 0].groupby(['Retailer', 'SKU']).agg(
         number_of_stores=('Store', 'nunique')
@@ -52,7 +51,7 @@ in_stock = None
 critical_stock = None
 df = None
 
-# If a new file is uploaded, process it
+# Process uploaded file if available
 if uploaded_file is not None:
     try:
         df = pd.read_excel(uploaded_file)
@@ -61,7 +60,7 @@ if uploaded_file is not None:
     else:
         out_of_stock, in_stock, critical_stock, df = process_data(df)
         if out_of_stock is not None:
-            # Save processed data and raw data for persistence
+            # Save processed data for persistence
             out_of_stock.to_csv("out_of_stock.csv", index=False)
             in_stock.to_csv("in_stock.csv", index=False)
             critical_stock.to_csv("critical_stock.csv", index=False)
@@ -78,9 +77,9 @@ else:
     if os.path.exists("critical_stock.csv"):
         critical_stock = pd.read_csv("critical_stock.csv")
 
-# Compute additional metrics if raw data is available
+# Additional Dashboards (if raw data is available)
 if df is not None:
-    # Dashboard 1: Total Out of Stock by Retailer (summing out-of-stock counts)
+    # Dashboard 1: Total Out of Stock by Retailer (using 🚫 emoji)
     if out_of_stock is not None:
         total_out_of_stock_by_retailer = out_of_stock.groupby('Retailer')['number_of_stores'].sum().reset_index()
     else:
@@ -88,32 +87,32 @@ if df is not None:
             total_out_of_stock=('Store', 'nunique')
         ).reset_index()
     
-    st.subheader("Total Out of Stock by Retailer ❌")
+    st.markdown("<h3 style='text-align: center;'>Total Out of Stock by Retailer 🚫</h3>", unsafe_allow_html=True)
     st.dataframe(total_out_of_stock_by_retailer)
     
     # Dashboard 2: Average Units of Stock per Store
     avg_stock_retailer = df.groupby('Retailer').agg(avg_stock=('Quantity','mean')).reset_index()
     avg_stock_by_sku = df.groupby(['Retailer','SKU']).agg(avg_stock=('Quantity','mean')).reset_index()
     
-    st.subheader("Average Units of Stock per Store")
+    st.markdown("<h3 style='text-align: center;'>Average Units of Stock per Store</h3>", unsafe_allow_html=True)
     avg_option = st.radio("Choose display option for average stock:", ("Overall per Retailer", "Breakdown by SKU"))
     if avg_option == "Overall per Retailer":
         st.dataframe(avg_stock_retailer)
     else:
         st.dataframe(avg_stock_by_sku)
 
-# Display the main dashboards in the desired order:
+# Display Main Dashboards in the desired order
 # 1. Out of Stock
 if out_of_stock is not None:
-    st.subheader("Out of Stock (0 units or less) ❌")
+    st.markdown("<h3 style='text-align: center;'>Out of Stock (0 units or less) ❌</h3>", unsafe_allow_html=True)
     st.dataframe(out_of_stock)
     
-# 2. Critical Stock (placed under Out of Stock)
+# 2. Critical Stock (placed below Out of Stock)
 if critical_stock is not None:
-    st.subheader("Critical Stock Levels (1 unit) ⚠️")
+    st.markdown("<h3 style='text-align: center;'>Critical Stock Levels (1 unit) ⚠️</h3>", unsafe_allow_html=True)
     st.dataframe(critical_stock)
     
 # 3. In Stock
 if in_stock is not None:
-    st.subheader("In Stock (2 or more units) ✅")
+    st.markdown("<h3 style='text-align: center;'>In Stock (2 or more units) ✅</h3>", unsafe_allow_html=True)
     st.dataframe(in_stock)
