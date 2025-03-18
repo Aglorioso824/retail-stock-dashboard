@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime
 
 # Display the title of the dashboard
-st.title("Welcome, Retail SumUpper")
+st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>", unsafe_allow_html=True)
 
 # Display the last data upload date if the CSV file exists
 if os.path.exists("out_of_stock.csv"):
