@@ -3,6 +3,22 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
+# Inject CSS to style the expander widget:
+st.markdown("""
+<style>
+/* Center the text in the expander header and set background color to light yellow */
+[data-baseweb="accordion"] > div > button {
+    background-color: #ffffe0;
+    text-align: center;
+}
+
+/* Set the background color of the expander content area to light yellow */
+[data-baseweb="accordion"] > div > div {
+    background-color: #ffffe0;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # Centered main title
 st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>", unsafe_allow_html=True)
 
@@ -90,7 +106,7 @@ if df is not None:
     st.markdown("<h3 style='text-align: center;'>Total Out of Stock by Retailer 🚫</h3>", unsafe_allow_html=True)
     st.dataframe(total_out_of_stock_by_retailer)
     
-    # Expandable Dashboard: List of Out-of-Stock Stores with SKU
+    # Expandable Dashboard: List of Out-of-Stock Stores with SKU (centered header, light yellow background)
     out_of_stock_details = df[df['Quantity'] <= 0][['Retailer', 'Store', 'SKU']].drop_duplicates().reset_index(drop=True)
     with st.expander("View List of Out-of-Stock Stores"):
         st.markdown("<h3 style='text-align: center;'>Out-of-Stock Stores Details</h3>", unsafe_allow_html=True)
