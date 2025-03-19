@@ -101,7 +101,7 @@ if df is not None:
     else:
         st.dataframe(avg_stock_by_sku)
 
-# Display Main Dashboards in the desired order
+# Display Main Dashboards in the desired order:
 # 1. Out of Stock
 if out_of_stock is not None:
     st.markdown("<h3 style='text-align: center;'>Out of Stock (0 units or less) ❌</h3>", unsafe_allow_html=True)
@@ -116,3 +116,10 @@ if critical_stock is not None:
 if in_stock is not None:
     st.markdown("<h3 style='text-align: center;'>In Stock (2 or more units) ✅</h3>", unsafe_allow_html=True)
     st.dataframe(in_stock)
+
+# Expandable Dashboard: List of Out-of-Stock Stores by Store Name and Retailer Name
+if df is not None:
+    out_of_stock_stores = df[df['Quantity'] <= 0][['Retailer', 'Store']].drop_duplicates().reset_index(drop=True)
+    with st.expander("View List of Out-of-Stock Stores"):
+        st.markdown("<h3 style='text-align: center;'>Out-of-Stock Stores by Retailer & Store</h3>", unsafe_allow_html=True)
+        st.dataframe(out_of_stock_stores)
