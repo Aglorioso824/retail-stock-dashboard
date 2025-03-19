@@ -90,6 +90,12 @@ if df is not None:
     st.markdown("<h3 style='text-align: center;'>Total Out of Stock by Retailer 🚫</h3>", unsafe_allow_html=True)
     st.dataframe(total_out_of_stock_by_retailer)
     
+    # Expandable Dashboard: List of Out-of-Stock Stores with SKU
+    out_of_stock_details = df[df['Quantity'] <= 0][['Retailer', 'Store', 'SKU']].drop_duplicates().reset_index(drop=True)
+    with st.expander("View List of Out-of-Stock Stores"):
+        st.markdown("<h3 style='text-align: center;'>Out-of-Stock Stores Details</h3>", unsafe_allow_html=True)
+        st.dataframe(out_of_stock_details)
+    
     # Dashboard 2: Average Units of Stock per Store
     avg_stock_retailer = df.groupby('Retailer').agg(avg_stock=('Quantity','mean')).reset_index()
     avg_stock_by_sku = df.groupby(['Retailer','SKU']).agg(avg_stock=('Quantity','mean')).reset_index()
@@ -116,10 +122,3 @@ if critical_stock is not None:
 if in_stock is not None:
     st.markdown("<h3 style='text-align: center;'>In Stock (2 or more units) ✅</h3>", unsafe_allow_html=True)
     st.dataframe(in_stock)
-
-# Expandable Dashboard: List of Out-of-Stock Stores by Store Name and Retailer Name
-if df is not None:
-    out_of_stock_stores = df[df['Quantity'] <= 0][['Retailer', 'Store']].drop_duplicates().reset_index(drop=True)
-    with st.expander("View List of Out-of-Stock Stores"):
-        st.markdown("<h3 style='text-align: center;'>Out-of-Stock Stores by Retailer & Store</h3>", unsafe_allow_html=True)
-        st.dataframe(out_of_stock_stores)
