@@ -104,11 +104,11 @@ if df is not None:
     st.markdown("<h3 style='text-align: center;'>Total Out of Stock by Retailer 🚫</h3>", unsafe_allow_html=True)
     st.dataframe(total_out_of_stock_by_retailer)
     
-    # Create separate expandable widgets for each retailer with out-of-stock details
+    # Create separate expandable widgets for each retailer with out-of-stock stores details
     out_of_stock_details = df[df['Quantity'] <= 0][['Retailer', 'Store', 'SKU']].drop_duplicates().reset_index(drop=True)
     for retailer in out_of_stock_details['Retailer'].unique():
         retailer_details = out_of_stock_details[out_of_stock_details['Retailer'] == retailer]
-        with st.expander(f"View {retailer} Out-of-Stock Details"):
+        with st.expander(f"View {retailer} Out-of-Stock Stores"):
             st.markdown(f"<h3 style='text-align: center;'>{retailer} Out-of-Stock Stores</h3>", unsafe_allow_html=True)
             st.dataframe(retailer_details)
     
