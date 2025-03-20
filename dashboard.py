@@ -3,18 +3,14 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# Updated CSS injection for expander styling:
-# This targets the expander header and content using updated selectors and enforces the styles.
+# Inject CSS to style the expander widget (center header and light yellow background)
 st.markdown("""
 <style>
-/* Target the expander header button: center text and set light yellow background */
 [data-testid="stExpander"] > div:first-child > div > button {
     background-color: #ffffe0 !important;
     text-align: center !important;
     width: 100%;
 }
-
-/* Target the expander content area: set light yellow background */
 [data-testid="stExpander"] > div:nth-child(2) {
     background-color: #ffffe0 !important;
 }
@@ -108,11 +104,13 @@ if df is not None:
     st.markdown("<h3 style='text-align: center;'>Total Out of Stock by Retailer 🚫</h3>", unsafe_allow_html=True)
     st.dataframe(total_out_of_stock_by_retailer)
     
-    # Expandable Dashboard: List of Out-of-Stock Stores with SKU
+    # Create separate expandable widgets for each retailer with out-of-stock details
     out_of_stock_details = df[df['Quantity'] <= 0][['Retailer', 'Store', 'SKU']].drop_duplicates().reset_index(drop=True)
-    with st.expander("View List of Out-of-Stock Stores"):
-        st.markdown("<h3 style='text-align: center;'>Out-of-Stock Stores Details</h3>", unsafe_allow_html=True)
-        st.dataframe(out_of_stock_details)
+    for retailer in out_of_stock_details['Retailer'].unique():
+        retailer_details = out_of_stock_details[out_of_stock_details['Retailer'] == retailer]
+        with st.expander(f"View {retailer} Out-of-Stock Details"):
+            st.markdown(f"<h3 style='text-align: center;'>{retailer} Out-of-Stock Stores</h3>", unsafe_allow_html=True)
+            st.dataframe(retailer_details)
     
     # Dashboard 2: Average Units of Stock per Store
     avg_stock_retailer = df.groupby('Retailer').agg(avg_stock=('Quantity','mean')).reset_index()
