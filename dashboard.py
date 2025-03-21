@@ -3,6 +3,11 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
+# IMPORTANT NOTE:
+# 1. Save your new Homer image file (e.g., "homer_image.png") in the same folder as this dashboard.py,
+#    or in a subfolder like "images/homer_image.png".
+# 2. Update the file path in st.image(...) below to match where you actually placed the file.
+
 # Inject CSS to style the expander widget (center header and light yellow background)
 st.markdown("""
 <style>
@@ -17,10 +22,18 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Centered main title
-st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>", unsafe_allow_html=True)
+# Create two columns: one for the title (centered within its column) and one for the image on the right
+col1, col2 = st.columns([0.8, 0.2])
 
-# Center the Last Data Upload Date
+with col1:
+    # Centered main title in the first column
+    st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>", unsafe_allow_html=True)
+
+with col2:
+    # Display the Homer image on the right (adjust width as desired)
+    st.image("homer_image.png", width=100)
+
+# Center the Last Data Upload Date below the title row
 if os.path.exists("out_of_stock.csv"):
     last_upload_timestamp = os.path.getmtime("out_of_stock.csv")
     last_upload_date = datetime.fromtimestamp(last_upload_timestamp).strftime("%d/%m/%Y")
