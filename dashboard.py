@@ -4,8 +4,8 @@ import pandas as pd
 from datetime import datetime
 
 # IMPORTANT:
-# 1. Place "homer.png" in the same folder as this dashboard.py,
-#    or in a subfolder like "images/homer.png" if you prefer.
+# 1. Place "homerbook.png" in the same folder as this dashboard.py,
+#    or in a subfolder like "images/homerbook.png" if you prefer.
 # 2. If you use a subfolder, update the path in st.image(...) below.
 
 # Inject CSS to style the expander widget (center header and light yellow background)
@@ -31,7 +31,7 @@ with col1:
 
 with col2:
     # Display the Homer image on the right (adjust width as desired)
-    st.image("homer.png", width=100)
+    st.image("homerbook.png", width=100)
 
 # Center the Last Data Upload Date below the title row
 if os.path.exists("out_of_stock.csv"):
@@ -106,16 +106,16 @@ else:
 
 # Additional Dashboards (if raw data is available)
 if df is not None:
-    # Dashboard 1: Total Out of Stock by Retailer (using 🚫 emoji)
+    # Dashboard 1: Out of Stock Situations (by Retailer)
     if out_of_stock is not None:
-        total_out_of_stock_by_retailer = out_of_stock.groupby('Retailer')['number_of_stores'].sum().reset_index()
+        out_of_stock_by_retailer = out_of_stock.groupby('Retailer')['number_of_stores'].sum().reset_index()
     else:
-        total_out_of_stock_by_retailer = df[df['Quantity'] <= 0].groupby('Retailer').agg(
+        out_of_stock_by_retailer = df[df['Quantity'] <= 0].groupby('Retailer').agg(
             total_out_of_stock=('Store', 'nunique')
         ).reset_index()
     
-    st.markdown("<h3 style='text-align: center;'>Total Out of Stock by Retailer 🚫</h3>", unsafe_allow_html=True)
-    st.dataframe(total_out_of_stock_by_retailer)
+    st.markdown("<h3 style='text-align: center;'>Out of Stock Situations (by Retailer)</h3>", unsafe_allow_html=True)
+    st.dataframe(out_of_stock_by_retailer)
     
     # Create separate expandable widgets for each retailer with out-of-stock stores details
     out_of_stock_details = df[df['Quantity'] <= 0][['Retailer', 'Store', 'SKU']].drop_duplicates().reset_index(drop=True)
