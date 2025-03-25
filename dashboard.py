@@ -3,7 +3,9 @@ import pandas as pd
 import boto3
 from datetime import datetime
 from io import BytesIO
-import os  # For os.path.exists, etc.
+import os
+
+BUCKET_NAME = "my-retail-uploads"
 
 s3_client = boto3.client(
     "s3",
