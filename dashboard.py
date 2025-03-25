@@ -8,8 +8,16 @@ import os  # For os.path.exists, etc.
 # ------------------------------------------------------------------------
 # 1. Set up your S3 information
 # ------------------------------------------------------------------------
+# IMPORTANT: The BUCKET_NAME must match the name of your S3 bucket.
 BUCKET_NAME = "my-retail-uploads"
-s3_client = boto3.client("s3")
+
+# Create the S3 client using environment variables for credentials.
+# Make sure AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are set in Streamlit secrets.
+s3_client = boto3.client(
+    "s3",
+    aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY")
+)
 
 def upload_to_s3(file_buffer, filename):
     """
@@ -41,12 +49,6 @@ def download_from_s3(bucket_name, key):
 # ------------------------------------------------------------------------
 # 2. UI: Title, Image, and CSS
 # ------------------------------------------------------------------------
-# IMPORTANT:
-# 1. Place "homerbook.png" in the same folder as this dashboard.py,
-#    or in a subfolder like "images/homerbook.png" if you prefer.
-# 2. If you use a subfolder, update the path in st.image(...) below.
-
-# Inject CSS to style the expander widget (center header and light yellow background)
 st.markdown("""
 <style>
 [data-testid="stExpander"] > div:first-child > div > button {
@@ -60,15 +62,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Create two columns: one for the title (centered within its column) and one for the image on the right
 col1, col2 = st.columns([0.8, 0.2])
-
 with col1:
-    # Centered main title in the first column
     st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>", unsafe_allow_html=True)
-
 with col2:
-    # Display the Homer image on the right (adjust width as desired)
     st.image("homerbook.png", width=100)
 
 # ------------------------------------------------------------------------
@@ -115,7 +112,6 @@ def process_data(df):
     
     return out_of_stock, in_stock, critical_stock, df
 
-# Initialize variables
 out_of_stock = None
 in_stock = None
 critical_stock = None
@@ -124,18 +120,14 @@ df = None
 # Process uploaded file if available
 if uploaded_file is not None:
     try:
-        # Read Excel locally
         df = pd.read_excel(uploaded_file)
     except Exception as e:
         st.error(f"Error reading the Excel file: {e}")
     else:
-        # -----------------------------------------------------------
-        # A) Upload the raw Excel file to S3 with a timestamp
-        # -----------------------------------------------------------
+        # Upload the raw Excel file to S3 with a timestamp
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         new_filename = f"weekly-report-{timestamp}.xlsx"
         upload_to_s3(uploaded_file, new_filename)
-        # -----------------------------------------------------------
 
         # Process data locally
         out_of_stock, in_stock, critical_stock, df = process_data(df)
@@ -165,7 +157,6 @@ if st.button("Load Latest Report from S3"):
     if latest_key:
         st.write(f"Loading latest file from S3: {latest_key}")
         file_buffer = download_from_s3(BUCKET_NAME, latest_key)
-        # Read the Excel from S3
         new_df = pd.read_excel(file_buffer)
         st.dataframe(new_df.head())  # or further processing
     else:
@@ -195,7 +186,7 @@ if df is not None:
             st.dataframe(retailer_details)
     
     # --------------------------------------------------------------------
-    # Dashboard 2: Average Units of Stock per Store (New Sum-of-Averages)
+    # Dashboard 2: Average Units of Stock per Store (Sum-of-Averages)
     # --------------------------------------------------------------------
     # 1) Calculate average units per (Retailer, SKU)
     avg_stock_by_sku = (
@@ -231,7 +222,7 @@ if df is not None:
         st.markdown("<h3 style='text-align: center;'>Out of Stock (0 units or less) ❌</h3>", unsafe_allow_html=True)
         st.dataframe(out_of_stock)
         
-    # 2. Critical Stock (placed below Out of Stock)
+    # 2. Critical Stock
     if critical_stock is not None:
         st.markdown("<h3 style='text-align: center;'>Critical Stock Levels (1 unit) ⚠️</h3>", unsafe_allow_html=True)
         st.dataframe(critical_stock)
