@@ -5,18 +5,10 @@ from datetime import datetime
 from io import BytesIO
 import os  # For os.path.exists, etc.
 
-# ------------------------------------------------------------------------
-# 1. Set up your S3 information
-# ------------------------------------------------------------------------
-# IMPORTANT: The BUCKET_NAME must match the name of your S3 bucket.
-BUCKET_NAME = "my-retail-uploads"
-
-# Create the S3 client using environment variables for credentials.
-# Make sure AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are set in Streamlit secrets.
 s3_client = boto3.client(
     "s3",
-    aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
-    aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY")
+    aws_access_key_id=st.secrets["aws"]["AWS_ACCESS_KEY_ID"],
+    aws_secret_access_key=st.secrets["aws"]["AWS_SECRET_ACCESS_KEY"]
 )
 
 def upload_to_s3(file_buffer, filename):
