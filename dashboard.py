@@ -156,9 +156,9 @@ if st.button("Load Latest Report from S3"):
         file_content = file_buffer.getvalue()
         st.write("File size (bytes):", len(file_content))
         
-        # Try reading the Excel file
+        # Try reading the Excel file with the specified engine
         try:
-            new_df = pd.read_excel(file_buffer)
+            new_df = pd.read_excel(file_buffer, engine="openpyxl")
             st.dataframe(new_df.head())
         except Exception as e:
             st.error(f"Error reading Excel file: {e}")
