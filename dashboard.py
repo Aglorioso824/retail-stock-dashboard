@@ -5,8 +5,12 @@ from datetime import datetime
 from io import BytesIO
 import os
 
-BUCKET_NAME = "my-retail-uploads"
+# ------------------------------------------------------------------------
+# 1. Set up your S3 information
+# ------------------------------------------------------------------------
+BUCKET_NAME = "my-retail-uploads"  # Your S3 bucket name
 
+# Create the S3 client using credentials from Streamlit secrets
 s3_client = boto3.client(
     "s3",
     aws_access_key_id=st.secrets["aws"]["AWS_ACCESS_KEY_ID"],
@@ -111,30 +115,29 @@ in_stock = None
 critical_stock = None
 df = None
 
-# Process uploaded file if available
 if uploaded_file is not None:
     try:
+        # Try reading the file to ensure it's valid
         df = pd.read_excel(uploaded_file, engine="openpyxl")
     except Exception as e:
         st.error(f"Error reading the Excel file: {e}")
     else:
-        # Reset the file pointer to ensure the entire file is uploaded
+        # Reset the file pointer to the beginning before uploading to S3
         uploaded_file.seek(0)
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         new_filename = f"weekly-report-{timestamp}.xlsx"
         upload_to_s3(uploaded_file, new_filename)
-        # Process data locally...
-
+        
+        # Process the data locally and save CSVs for dashboards
         out_of_stock, in_stock, critical_stock, df = process_data(df)
         if out_of_stock is not None:
-            # Save processed data locally
             out_of_stock.to_csv("out_of_stock.csv", index=False)
             in_stock.to_csv("in_stock.csv", index=False)
             critical_stock.to_csv("critical_stock.csv", index=False)
             df.to_csv("raw_data.csv", index=False)
             st.success("Data uploaded and processed successfully!")
 else:
-    # If no new file is uploaded, try to load existing saved data locally
+    # Load existing data if available
     if os.path.exists("raw_data.csv"):
         df = pd.read_csv("raw_data.csv")
     if os.path.exists("out_of_stock.csv"):
@@ -153,11 +156,16 @@ if st.button("Load Latest Report from S3"):
         st.write(f"Loading latest file from S3: {latest_key}")
         file_buffer = download_from_s3(BUCKET_NAME, latest_key)
         
-        # Debug: print the size of the file in bytes
+        # Debug: Check file size and content
         file_content = file_buffer.getvalue()
         st.write("File size (bytes):", len(file_content))
         
-        # Try reading the Excel file with the specified engine
+        # Save temporary file for manual inspection (optional debug)
+        with open("temp_download.xlsx", "wb") as f:
+            f.write(file_content)
+        st.write("Temporary file 'temp_download.xlsx' saved for inspection.")
+        
+        # Try reading the Excel file using the openpyxl engine
         try:
             new_df = pd.read_excel(file_buffer, engine="openpyxl")
             st.dataframe(new_df.head())
@@ -193,14 +201,11 @@ if df is not None:
     # --------------------------------------------------------------------
     # Dashboard 2: Average Units of Stock per Store (Sum-of-Averages)
     # --------------------------------------------------------------------
-    # 1) Calculate average units per (Retailer, SKU)
     avg_stock_by_sku = (
         df.groupby(['Retailer', 'SKU'])
           .agg(avg_stock=('Quantity', 'mean'))
           .reset_index()
     )
-    
-    # 2) Sum those SKU-level averages for each retailer
     sum_of_avg_stock_by_retailer = (
         avg_stock_by_sku
         .groupby('Retailer')['avg_stock']
@@ -215,24 +220,17 @@ if df is not None:
     )
     
     if avg_option == "Overall per Retailer":
-        # Display the sum of averages for each retailer
         st.dataframe(sum_of_avg_stock_by_retailer)
     else:
-        # Display the average units per SKU (the breakdown)
         st.dataframe(avg_stock_by_sku)
-
-    # Main Dashboards in the desired order:
-    # 1. Out of Stock
+    
+    # Main dashboards:
     if out_of_stock is not None:
         st.markdown("<h3 style='text-align: center;'>Out of Stock (0 units or less) ❌</h3>", unsafe_allow_html=True)
         st.dataframe(out_of_stock)
-        
-    # 2. Critical Stock
     if critical_stock is not None:
         st.markdown("<h3 style='text-align: center;'>Critical Stock Levels (1 unit) ⚠️</h3>", unsafe_allow_html=True)
         st.dataframe(critical_stock)
-        
-    # 3. In Stock
     if in_stock is not None:
         st.markdown("<h3 style='text-align: center;'>In Stock (2 or more units) ✅</h3>", unsafe_allow_html=True)
         st.dataframe(in_stock)
