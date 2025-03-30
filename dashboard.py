@@ -114,16 +114,17 @@ df = None
 # Process uploaded file if available
 if uploaded_file is not None:
     try:
-        df = pd.read_excel(uploaded_file)
+        df = pd.read_excel(uploaded_file, engine="openpyxl")
     except Exception as e:
         st.error(f"Error reading the Excel file: {e}")
     else:
-        # Upload the raw Excel file to S3 with a timestamp
+        # Reset the file pointer to ensure the entire file is uploaded
+        uploaded_file.seek(0)
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         new_filename = f"weekly-report-{timestamp}.xlsx"
         upload_to_s3(uploaded_file, new_filename)
+        # Process data locally...
 
-        # Process data locally
         out_of_stock, in_stock, critical_stock, df = process_data(df)
         if out_of_stock is not None:
             # Save processed data locally
