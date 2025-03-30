@@ -151,8 +151,18 @@ if st.button("Load Latest Report from S3"):
     if latest_key:
         st.write(f"Loading latest file from S3: {latest_key}")
         file_buffer = download_from_s3(BUCKET_NAME, latest_key)
-        new_df = pd.read_excel(file_buffer)
-        st.dataframe(new_df.head())  # or further processing
+        
+        # Debug: print the size of the file in bytes
+        file_content = file_buffer.getvalue()
+        st.write("File size (bytes):", len(file_content))
+        
+        # Try reading the Excel file
+        try:
+            new_df = pd.read_excel(file_buffer)
+            st.dataframe(new_df.head())
+        except Exception as e:
+            st.error(f"Error reading Excel file: {e}")
+            st.write("First 500 bytes of file content:", file_content[:500])
     else:
         st.warning("No files found in S3!")
 
