@@ -40,8 +40,6 @@ SKU_MAPPING = {
     "SUMUP 3G PAYMENT KIT/PRINTER PK1 DNO": "3G PK",
     "DX SUMUP AIR CARD PAYMENT DEVICE PK1": "Air",
     "DX SUMUP 3G CARD PAYMENT DEVICE PK1 DNO": "3G",
-
-    # add more old_sku: new_reference pairs here
 }
 
 # ------------------------------------------------------------------------
@@ -90,7 +88,8 @@ st.markdown("""
 
 col1, col2 = st.columns([0.8, 0.2])
 with col1:
-    st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>",
+                unsafe_allow_html=True)
 with col2:
     st.image("homerbook.png", width=100)
 
@@ -107,13 +106,18 @@ else:
                 unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------
+# Helper: apply SKU mapping
+# ------------------------------------------------------------------------
+def apply_sku_mapping(df: pd.DataFrame) -> pd.DataFrame:
+    df['SKU'] = df['SKU'].map(lambda s: SKU_MAPPING.get(s, s))
+    return df
+
+# ------------------------------------------------------------------------
 # 4. File Uploader & S3 Upload
 # ------------------------------------------------------------------------
 uploaded_file = st.file_uploader("Upload your weekly Excel file (.xlsx)", type="xlsx")
 
 def process_data(df):
-    # 0) Rename SKUs
-    df['SKU'] = df['SKU'].map(lambda s: SKU_MAPPING.get(s, s))
     # 1) Drop ignored stores
     if IGNORED_STORES:
         df = df[~df['Store'].isin(IGNORED_STORES)]
@@ -125,7 +129,7 @@ def process_data(df):
     # 3) Filter to first 5 retailers
     retailers = df['Retailer'].unique()[:5]
     df = df[df['Retailer'].isin(retailers)]
-    # 4) Compute out/in/critical stock
+    # 4) Compute stock tables
     out_of_stock = (
         df[df['Quantity'] <= 0]
           .groupby(['Retailer', 'SKU'])
@@ -154,6 +158,7 @@ out_of_stock = in_stock = critical_stock = df = None
 if uploaded_file is not None:
     try:
         df = pd.read_excel(uploaded_file, engine="openpyxl")
+        df = apply_sku_mapping(df)
     except Exception as e:
         st.error(f"Error reading the Excel file: {e}")
     else:
@@ -161,6 +166,7 @@ if uploaded_file is not None:
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         fname = f"weekly-report-{ts}.xlsx"
         upload_to_s3(uploaded_file, fname)
+
         out_of_stock, in_stock, critical_stock, df = process_data(df)
         if out_of_stock is not None:
             out_of_stock.to_csv("out_of_stock.csv", index=False)
@@ -169,9 +175,10 @@ if uploaded_file is not None:
             df.to_csv("raw_data.csv", index=False)
             st.success("Data uploaded and processed successfully!")
 else:
-    # Load existing CSVs and normalize columns
+    # Load existing CSVs, normalize SKU & column names
     if os.path.exists("raw_data.csv"):
         df = pd.read_csv("raw_data.csv")
+        df = apply_sku_mapping(df)
     if os.path.exists("out_of_stock.csv"):
         out_of_stock = pd.read_csv("out_of_stock.csv")
         if 'number_of_stores' in out_of_stock.columns:
@@ -200,6 +207,7 @@ if st.button("Load Latest Report from S3"):
         st.write("Saved temp_download.xlsx for inspection.")
         try:
             new_df = pd.read_excel(buf, engine="openpyxl")
+            new_df = apply_sku_mapping(new_df)
             st.dataframe(new_df.head())
         except Exception as e:
             st.error(f"Error reading Excel file: {e}")
@@ -214,9 +222,10 @@ if df is not None:
     # Out-of-Stock Summary by Retailer (Number of Situations)
     if out_of_stock is not None:
         out_of_stock_by_retailer = (
-            out_of_stock.groupby('Retailer')['Number of Stores']
-                     .sum()
-                     .reset_index(name='Number of Situations')
+            out_of_stock
+              .groupby('Retailer')['Number of Stores']
+              .sum()
+              .reset_index(name='Number of Situations')
         )
     else:
         tmp = (
@@ -253,6 +262,7 @@ if df is not None:
         .sum()
         .reset_index(name='sum_of_avg_stock')
     )
+
     avg_stock_by_sku['avg_stock'] = avg_stock_by_sku['avg_stock'].round(1)
     sum_of_avg['sum_of_avg_stock'] = sum_of_avg['sum_of_avg_stock'].round(1)
 
