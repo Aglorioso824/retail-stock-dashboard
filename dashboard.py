@@ -51,10 +51,8 @@ st.markdown("""
 
 col1, col2 = st.columns([0.8, 0.2])
 with col1:
-    st.markdown(
-        "<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>",
-        unsafe_allow_html=True
-    )
+    st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>",
+                unsafe_allow_html=True)
 with col2:
     st.image("homerbook.png", width=100)
 
@@ -64,15 +62,11 @@ with col2:
 if os.path.exists("out_of_stock.csv"):
     ts = os.path.getmtime("out_of_stock.csv")
     date = datetime.fromtimestamp(ts).strftime("%d/%m/%Y")
-    st.markdown(
-        f"<p style='text-align: center;'>Last Data Upload Date: {date}</p>",
-        unsafe_allow_html=True
-    )
+    st.markdown(f"<p style='text-align: center;'>Last Data Upload Date: {date}</p>",
+                unsafe_allow_html=True)
 else:
-    st.markdown(
-        "<p style='text-align: center;'>No data uploaded yet.</p>",
-        unsafe_allow_html=True
-    )
+    st.markdown("<p style='text-align: center;'>No data uploaded yet.</p>",
+                unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------
 # 4. File Uploader & S3 Upload
@@ -85,11 +79,9 @@ def process_data(df):
         st.error("The file must have the columns: Retailer, SKU, Store, Quantity")
         return None, None, None, None
 
-    # Filter first 5 retailers
     retailers = df['Retailer'].unique()[:5]
     df = df[df['Retailer'].isin(retailers)]
 
-    # Out-of-stock
     out_of_stock = (
         df[df['Quantity'] <= 0]
           .groupby(['Retailer', 'SKU'])
@@ -97,7 +89,6 @@ def process_data(df):
           .reset_index()
           .rename(columns={'number_of_stores': 'Number of Stores'})
     )
-    # In-stock
     in_stock = (
         df[df['Quantity'] >= 2]
           .groupby(['Retailer', 'SKU'])
@@ -105,7 +96,6 @@ def process_data(df):
           .reset_index()
           .rename(columns={'number_of_stores': 'Number of Stores'})
     )
-    # Critical (1 unit)
     critical_stock = (
         df[df['Quantity'] == 1]
           .groupby(['Retailer', 'SKU'])
@@ -141,10 +131,14 @@ else:
         df = pd.read_csv("raw_data.csv")
     if os.path.exists("out_of_stock.csv"):
         out_of_stock = pd.read_csv("out_of_stock.csv")
+        # Rename old column for consistency
+        out_of_stock = out_of_stock.rename(columns={'number_of_stores': 'Number of Stores'})
     if os.path.exists("in_stock.csv"):
         in_stock = pd.read_csv("in_stock.csv")
+        in_stock = in_stock.rename(columns={'number_of_stores': 'Number of Stores'})
     if os.path.exists("critical_stock.csv"):
         critical_stock = pd.read_csv("critical_stock.csv")
+        critical_stock = critical_stock.rename(columns={'number_of_stores': 'Number of Stores'})
 
 # ------------------------------------------------------------------------
 # 5. Load Latest from S3 (Debugging)
@@ -157,7 +151,6 @@ if st.button("Load Latest Report from S3"):
         content = buf.getvalue()
         st.write("File size (bytes):", len(content))
 
-        # Optional: save temp file for inspection
         with open("temp_download.xlsx", "wb") as f:
             f.write(content)
         st.write("Saved temp_download.xlsx for inspection.")
@@ -183,15 +176,14 @@ if df is not None:
             .reset_index(name='Number of Situations')
         )
     else:
-        out_of_stock_by_retailer = (
+        tmp = (
             df[df['Quantity'] <= 0]
               .groupby('Retailer')
               .agg(total_out_of_stock=('Store', 'nunique'))
               .reset_index()
+              .rename(columns={'total_out_of_stock': 'Number of Situations'})
         )
-        out_of_stock_by_retailer = out_of_stock_by_retailer.rename(
-            columns={'total_out_of_stock': 'Number of Situations'}
-        )
+        out_of_stock_by_retailer = tmp
 
     st.markdown("<h3 style='text-align: center;'>Out of Stock Situations (by Retailer)</h3>",
                 unsafe_allow_html=True)
