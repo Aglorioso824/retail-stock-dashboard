@@ -20,7 +20,7 @@ IGNORED_STORES = [
 ]
 
 # ------------------------------------------------------------------------
-# Configuration: rename SKUs
+# Configuration: SKUs to rename
 # ------------------------------------------------------------------------
 SKU_MAPPING = {
     "226-800604901": "Air Bundle",
@@ -41,6 +41,18 @@ SKU_MAPPING = {
     "DX SUMUP AIR CARD PAYMENT DEVICE PK1": "Air",
     "DX SUMUP 3G CARD PAYMENT DEVICE PK1 DNO": "3G",
 }
+
+# ------------------------------------------------------------------------
+# Configuration: SKUs to completely ignore
+# ------------------------------------------------------------------------
+IGNORED_SKUS = [
+    "SUMUP 3G PAYMENT KIT/PRINTER PK1 DNO",
+    "DX SUMUP 3G CARD PAYMENT DEVICE PK1 DNO",
+    "613971    :  SP6 SP6 SUMUP  3G+ PK",
+    "226-902600701",
+    
+    # add any SKUs here that you want to drop entirely
+]
 
 # ------------------------------------------------------------------------
 # 1. Set up your S3 information
@@ -106,10 +118,14 @@ else:
                 unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------
-# Helper: apply SKU mapping
+# Helper: apply SKU mapping & ignore rules
 # ------------------------------------------------------------------------
-def apply_sku_mapping(df: pd.DataFrame) -> pd.DataFrame:
+def apply_sku_mapping_and_ignore(df: pd.DataFrame) -> pd.DataFrame:
+    # 1) rename SKUs
     df['SKU'] = df['SKU'].map(lambda s: SKU_MAPPING.get(s, s))
+    # 2) drop ignored SKUs
+    if IGNORED_SKUS:
+        df = df[~df['SKU'].isin(IGNORED_SKUS)]
     return df
 
 # ------------------------------------------------------------------------
@@ -118,18 +134,18 @@ def apply_sku_mapping(df: pd.DataFrame) -> pd.DataFrame:
 uploaded_file = st.file_uploader("Upload your weekly Excel file (.xlsx)", type="xlsx")
 
 def process_data(df):
-    # 1) Drop ignored stores
+    # drop ignored stores
     if IGNORED_STORES:
         df = df[~df['Store'].isin(IGNORED_STORES)]
-    # 2) Validate columns
+    # validate columns
     required = {'Retailer', 'SKU', 'Store', 'Quantity'}
     if not required.issubset(df.columns):
         st.error("The file must have the columns: Retailer, SKU, Store, Quantity")
         return None, None, None, None
-    # 3) Filter to first 5 retailers
+    # filter to first 5 retailers
     retailers = df['Retailer'].unique()[:5]
     df = df[df['Retailer'].isin(retailers)]
-    # 4) Compute stock tables
+    # compute out/in/critical
     out_of_stock = (
         df[df['Quantity'] <= 0]
           .groupby(['Retailer', 'SKU'])
@@ -158,7 +174,7 @@ out_of_stock = in_stock = critical_stock = df = None
 if uploaded_file is not None:
     try:
         df = pd.read_excel(uploaded_file, engine="openpyxl")
-        df = apply_sku_mapping(df)
+        df = apply_sku_mapping_and_ignore(df)
     except Exception as e:
         st.error(f"Error reading the Excel file: {e}")
     else:
@@ -166,7 +182,6 @@ if uploaded_file is not None:
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         fname = f"weekly-report-{ts}.xlsx"
         upload_to_s3(uploaded_file, fname)
-
         out_of_stock, in_stock, critical_stock, df = process_data(df)
         if out_of_stock is not None:
             out_of_stock.to_csv("out_of_stock.csv", index=False)
@@ -175,10 +190,10 @@ if uploaded_file is not None:
             df.to_csv("raw_data.csv", index=False)
             st.success("Data uploaded and processed successfully!")
 else:
-    # Load existing CSVs, normalize SKU & column names
+    # load existing CSVs & normalize
     if os.path.exists("raw_data.csv"):
         df = pd.read_csv("raw_data.csv")
-        df = apply_sku_mapping(df)
+        df = apply_sku_mapping_and_ignore(df)
     if os.path.exists("out_of_stock.csv"):
         out_of_stock = pd.read_csv("out_of_stock.csv")
         if 'number_of_stores' in out_of_stock.columns:
@@ -207,7 +222,7 @@ if st.button("Load Latest Report from S3"):
         st.write("Saved temp_download.xlsx for inspection.")
         try:
             new_df = pd.read_excel(buf, engine="openpyxl")
-            new_df = apply_sku_mapping(new_df)
+            new_df = apply_sku_mapping_and_ignore(new_df)
             st.dataframe(new_df.head())
         except Exception as e:
             st.error(f"Error reading Excel file: {e}")
@@ -222,10 +237,9 @@ if df is not None:
     # Out-of-Stock Summary by Retailer (Number of Situations)
     if out_of_stock is not None:
         out_of_stock_by_retailer = (
-            out_of_stock
-              .groupby('Retailer')['Number of Stores']
-              .sum()
-              .reset_index(name='Number of Situations')
+            out_of_stock.groupby('Retailer')['Number of Stores']
+                     .sum()
+                     .reset_index(name='Number of Situations')
         )
     else:
         tmp = (
