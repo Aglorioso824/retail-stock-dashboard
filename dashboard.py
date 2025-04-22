@@ -6,6 +6,22 @@ from io import BytesIO
 import os
 
 # ------------------------------------------------------------------------
+# Configuration: stores to ignore
+# ------------------------------------------------------------------------
+IGNORED_STORES = [
+    "04944: CURRYS ONLINE 'OMS VIRTUAL'",
+    "04947: PCW ONLINE OMS VIRTUAL",
+    "04985: IRELAND ONLINE SMALLBOX DIRECT",
+    "07272: ONLINE CSC INVESTIGATIONS",
+    "05088: PCWB DIRECT SALE 'OMS VIRTUAL'",
+    "05089: PCWB ONLINE CUSTOMER RETURNS",
+    "07272: ONLINE CSC INVESTIGATIONS",
+    "07099: NEWARK RDC",
+    "07800: NATIONAL RETURNS",
+    
+]
+
+# ------------------------------------------------------------------------
 # 1. Set up your S3 information
 # ------------------------------------------------------------------------
 BUCKET_NAME = "my-retail-uploads"
@@ -51,8 +67,7 @@ st.markdown("""
 
 col1, col2 = st.columns([0.8, 0.2])
 with col1:
-    st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>",
-                unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>", unsafe_allow_html=True)
 with col2:
     st.image("homerbook.png", width=100)
 
@@ -62,11 +77,9 @@ with col2:
 if os.path.exists("out_of_stock.csv"):
     ts = os.path.getmtime("out_of_stock.csv")
     date = datetime.fromtimestamp(ts).strftime("%d/%m/%Y")
-    st.markdown(f"<p style='text-align: center;'>Last Data Upload Date: {date}</p>",
-                unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align: center;'>Last Data Upload Date: {date}</p>", unsafe_allow_html=True)
 else:
-    st.markdown("<p style='text-align: center;'>No data uploaded yet.</p>",
-                unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>No data uploaded yet.</p>", unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------
 # 4. File Uploader & S3 Upload
@@ -74,14 +87,20 @@ else:
 uploaded_file = st.file_uploader("Upload your weekly Excel file (.xlsx)", type="xlsx")
 
 def process_data(df):
+    # 1) Drop ignored stores
+    if IGNORED_STORES:
+        df = df[~df['Store'].isin(IGNORED_STORES)]
+    # 2) Validate columns
     required = {'Retailer', 'SKU', 'Store', 'Quantity'}
     if not required.issubset(df.columns):
         st.error("The file must have the columns: Retailer, SKU, Store, Quantity")
         return None, None, None, None
 
+    # 3) Filter to first 5 retailers
     retailers = df['Retailer'].unique()[:5]
     df = df[df['Retailer'].isin(retailers)]
 
+    # 4) Compute out/in/critical stock
     out_of_stock = (
         df[df['Quantity'] <= 0]
           .groupby(['Retailer', 'SKU'])
@@ -131,14 +150,10 @@ else:
         df = pd.read_csv("raw_data.csv")
     if os.path.exists("out_of_stock.csv"):
         out_of_stock = pd.read_csv("out_of_stock.csv")
-        # Rename old column for consistency
-        out_of_stock = out_of_stock.rename(columns={'number_of_stores': 'Number of Stores'})
     if os.path.exists("in_stock.csv"):
         in_stock = pd.read_csv("in_stock.csv")
-        in_stock = in_stock.rename(columns={'number_of_stores': 'Number of Stores'})
     if os.path.exists("critical_stock.csv"):
         critical_stock = pd.read_csv("critical_stock.csv")
-        critical_stock = critical_stock.rename(columns={'number_of_stores': 'Number of Stores'})
 
 # ------------------------------------------------------------------------
 # 5. Load Latest from S3 (Debugging)
@@ -150,11 +165,9 @@ if st.button("Load Latest Report from S3"):
         buf = download_from_s3(BUCKET_NAME, key)
         content = buf.getvalue()
         st.write("File size (bytes):", len(content))
-
         with open("temp_download.xlsx", "wb") as f:
             f.write(content)
         st.write("Saved temp_download.xlsx for inspection.")
-
         try:
             new_df = pd.read_excel(buf, engine="openpyxl")
             st.dataframe(new_df.head())
@@ -168,7 +181,7 @@ if st.button("Load Latest Report from S3"):
 # 6. Dashboards (Local Data + Rounded Averages)
 # ------------------------------------------------------------------------
 if df is not None:
-    # Out-of-Stock Summary by Retailer
+    # Out-of-Stock Summary by Retailer (Number of Situations)
     if out_of_stock is not None:
         out_of_stock_by_retailer = (
             out_of_stock.groupby('Retailer')['Number of Stores']
