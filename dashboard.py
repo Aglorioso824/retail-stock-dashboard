@@ -212,7 +212,11 @@ if df is not None:
         .sum()
         .reset_index(name='sum_of_avg_stock')
     )
-    
+
+# Round to one decimal place
+avg_stock_by_sku['avg_stock'] = avg_stock_by_sku['avg_stock'].round(1)
+sum_of_avg_stock_by_retailer['sum_of_avg_stock'] = sum_of_avg_stock_by_retailer['sum_of_avg_stock'].round(1)
+
     st.markdown("<h3 style='text-align: center;'>Average Units of Stock per Store</h3>", unsafe_allow_html=True)
     avg_option = st.radio(
         "Choose display option for average stock:",
