@@ -15,10 +15,8 @@ IGNORED_STORES = [
     "07272: ONLINE CSC INVESTIGATIONS",
     "05088: PCWB DIRECT SALE 'OMS VIRTUAL'",
     "05089: PCWB ONLINE CUSTOMER RETURNS",
-    "07272: ONLINE CSC INVESTIGATIONS",
     "07099: NEWARK RDC",
     "07800: NATIONAL RETURNS",
-    
 ]
 
 # ------------------------------------------------------------------------
@@ -67,7 +65,8 @@ st.markdown("""
 
 col1, col2 = st.columns([0.8, 0.2])
 with col1:
-    st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>",
+                unsafe_allow_html=True)
 with col2:
     st.image("homerbook.png", width=100)
 
@@ -77,9 +76,11 @@ with col2:
 if os.path.exists("out_of_stock.csv"):
     ts = os.path.getmtime("out_of_stock.csv")
     date = datetime.fromtimestamp(ts).strftime("%d/%m/%Y")
-    st.markdown(f"<p style='text-align: center;'>Last Data Upload Date: {date}</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align: center;'>Last Data Upload Date: {date}</p>",
+                unsafe_allow_html=True)
 else:
-    st.markdown("<p style='text-align: center;'>No data uploaded yet.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>No data uploaded yet.</p>",
+                unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------
 # 4. File Uploader & S3 Upload
@@ -87,20 +88,18 @@ else:
 uploaded_file = st.file_uploader("Upload your weekly Excel file (.xlsx)", type="xlsx")
 
 def process_data(df):
-    # 1) Drop ignored stores
+    # Drop ignored stores first
     if IGNORED_STORES:
         df = df[~df['Store'].isin(IGNORED_STORES)]
-    # 2) Validate columns
+
     required = {'Retailer', 'SKU', 'Store', 'Quantity'}
     if not required.issubset(df.columns):
         st.error("The file must have the columns: Retailer, SKU, Store, Quantity")
         return None, None, None, None
 
-    # 3) Filter to first 5 retailers
     retailers = df['Retailer'].unique()[:5]
     df = df[df['Retailer'].isin(retailers)]
 
-    # 4) Compute out/in/critical stock
     out_of_stock = (
         df[df['Quantity'] <= 0]
           .groupby(['Retailer', 'SKU'])
@@ -146,14 +145,21 @@ if uploaded_file is not None:
             df.to_csv("raw_data.csv", index=False)
             st.success("Data uploaded and processed successfully!")
 else:
+    # Load existing CSVs and rename old columns
     if os.path.exists("raw_data.csv"):
         df = pd.read_csv("raw_data.csv")
     if os.path.exists("out_of_stock.csv"):
         out_of_stock = pd.read_csv("out_of_stock.csv")
+        if 'number_of_stores' in out_of_stock.columns:
+            out_of_stock = out_of_stock.rename(columns={'number_of_stores': 'Number of Stores'})
     if os.path.exists("in_stock.csv"):
         in_stock = pd.read_csv("in_stock.csv")
+        if 'number_of_stores' in in_stock.columns:
+            in_stock = in_stock.rename(columns={'number_of_stores': 'Number of Stores'})
     if os.path.exists("critical_stock.csv"):
         critical_stock = pd.read_csv("critical_stock.csv")
+        if 'number_of_stores' in critical_stock.columns:
+            critical_stock = critical_stock.rename(columns={'number_of_stores': 'Number of Stores'})
 
 # ------------------------------------------------------------------------
 # 5. Load Latest from S3 (Debugging)
@@ -185,8 +191,8 @@ if df is not None:
     if out_of_stock is not None:
         out_of_stock_by_retailer = (
             out_of_stock.groupby('Retailer')['Number of Stores']
-            .sum()
-            .reset_index(name='Number of Situations')
+                     .sum()
+                     .reset_index(name='Number of Situations')
         )
     else:
         tmp = (
@@ -223,8 +229,6 @@ if df is not None:
         .sum()
         .reset_index(name='sum_of_avg_stock')
     )
-
-    # Round to 1 decimal
     avg_stock_by_sku['avg_stock'] = avg_stock_by_sku['avg_stock'].round(1)
     sum_of_avg['sum_of_avg_stock'] = sum_of_avg['sum_of_avg_stock'].round(1)
 
