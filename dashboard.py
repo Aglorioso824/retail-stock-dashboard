@@ -43,47 +43,43 @@ SKU_MAPPING = {
 }
 
 # ------------------------------------------------------------------------
-# Configuration: SKUs to completely ignore
+# Configuration: SKUs to ignore
 # ------------------------------------------------------------------------
 IGNORED_SKUS = [
     "SUMUP 3G PAYMENT KIT/PRINTER PK1 DNO",
     "DX SUMUP 3G CARD PAYMENT DEVICE PK1 DNO",
     "613971    :  SP6 SP6 SUMUP  3G+ PK",
     "226-902600701",
-    
-    # add any SKUs here that you want to drop entirely
 ]
 
 # ------------------------------------------------------------------------
-# 1. Set up your S3 information
+# 1. S3 setup
 # ------------------------------------------------------------------------
 BUCKET_NAME = "my-retail-uploads"
-
 s3_client = boto3.client(
     "s3",
     aws_access_key_id=st.secrets["aws"]["AWS_ACCESS_KEY_ID"],
-    aws_secret_access_key=st.secrets["aws"]["AWS_SECRET_ACCESS_KEY"]
+    aws_secret_access_key=st.secrets["aws"]["AWS_SECRET_ACCESS_KEY"],
 )
 
-def upload_to_s3(file_buffer, filename):
-    s3_client.upload_fileobj(file_buffer, BUCKET_NAME, filename)
-    st.success(f"Uploaded {filename} to S3")
+def upload_to_s3(buf, fname):
+    s3_client.upload_fileobj(buf, BUCKET_NAME, fname)
+    st.success(f"Uploaded {fname} to S3")
 
-def get_latest_file_from_s3(bucket_name):
-    resp = s3_client.list_objects_v2(Bucket=bucket_name)
-    if "Contents" not in resp:
-        return None
+def get_latest_file_from_s3(bucket):
+    resp = s3_client.list_objects_v2(Bucket=bucket)
+    if "Contents" not in resp: return None
     objs = sorted(resp["Contents"], key=lambda x: x["LastModified"], reverse=True)
     return objs[0]["Key"]
 
-def download_from_s3(bucket_name, key):
+def download_from_s3(bucket, key):
     buf = BytesIO()
-    s3_client.download_fileobj(bucket_name, key, buf)
+    s3_client.download_fileobj(bucket, key, buf)
     buf.seek(0)
     return buf
 
 # ------------------------------------------------------------------------
-# 2. UI: Title, Image, and CSS
+# 2. UI styling
 # ------------------------------------------------------------------------
 st.markdown("""
 <style>
@@ -97,86 +93,75 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
-
 col1, col2 = st.columns([0.8, 0.2])
 with col1:
-    st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>",
-                unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>", unsafe_allow_html=True)
 with col2:
     st.image("homerbook.png", width=100)
 
 # ------------------------------------------------------------------------
-# 3. Last Data Upload Date
+# 3. Last upload date
 # ------------------------------------------------------------------------
 if os.path.exists("out_of_stock.csv"):
     ts = os.path.getmtime("out_of_stock.csv")
     date = datetime.fromtimestamp(ts).strftime("%d/%m/%Y")
-    st.markdown(f"<p style='text-align: center;'>Last Data Upload Date: {date}</p>",
-                unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align: center;'>Last Data Upload Date: {date}</p>", unsafe_allow_html=True)
 else:
-    st.markdown("<p style='text-align: center;'>No data uploaded yet.</p>",
-                unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>No data uploaded yet.</p>", unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------
-# Helper: apply SKU mapping & ignore rules
+# Helpers: SKU mapping + ignore, Store filtering
 # ------------------------------------------------------------------------
-def apply_sku_mapping_and_ignore(df: pd.DataFrame) -> pd.DataFrame:
-    # 1) rename SKUs
+def apply_sku_rules(df):
     df['SKU'] = df['SKU'].map(lambda s: SKU_MAPPING.get(s, s))
-    # 2) drop ignored SKUs
     if IGNORED_SKUS:
         df = df[~df['SKU'].isin(IGNORED_SKUS)]
     return df
 
+def filter_ignored_stores(df):
+    if IGNORED_STORES:
+        df = df[~df['Store'].isin(IGNORED_STORES)]
+    return df
+
 # ------------------------------------------------------------------------
-# 4. File Uploader & S3 Upload
+# 4. File upload & S3
 # ------------------------------------------------------------------------
 uploaded_file = st.file_uploader("Upload your weekly Excel file (.xlsx)", type="xlsx")
 
 def process_data(df):
-    # drop ignored stores
-    if IGNORED_STORES:
-        df = df[~df['Store'].isin(IGNORED_STORES)]
-    # validate columns
-    required = {'Retailer', 'SKU', 'Store', 'Quantity'}
+    df = apply_sku_rules(df)
+    df = filter_ignored_stores(df)
+    required = {'Retailer','SKU','Store','Quantity'}
     if not required.issubset(df.columns):
-        st.error("The file must have the columns: Retailer, SKU, Store, Quantity")
+        st.error("File must have Retailer, SKU, Store, Quantity")
         return None, None, None, None
-    # filter to first 5 retailers
     retailers = df['Retailer'].unique()[:5]
     df = df[df['Retailer'].isin(retailers)]
-    # compute out/in/critical
-    out_of_stock = (
-        df[df['Quantity'] <= 0]
-          .groupby(['Retailer', 'SKU'])
-          .agg(number_of_stores=('Store', 'nunique'))
-          .reset_index()
-          .rename(columns={'number_of_stores': 'Number of Stores'})
-    )
-    in_stock = (
-        df[df['Quantity'] >= 2]
-          .groupby(['Retailer', 'SKU'])
-          .agg(number_of_stores=('Store', 'nunique'))
-          .reset_index()
-          .rename(columns={'number_of_stores': 'Number of Stores'})
-    )
-    critical_stock = (
-        df[df['Quantity'] == 1]
-          .groupby(['Retailer', 'SKU'])
-          .agg(number_of_stores=('Store', 'nunique'))
-          .reset_index()
-          .rename(columns={'number_of_stores': 'Number of Stores'})
-    )
-    return out_of_stock, in_stock, critical_stock, df
+    out = (df[df['Quantity']<=0]
+           .groupby(['Retailer','SKU'])
+           .agg(number_of_stores=('Store','nunique'))
+           .reset_index()
+           .rename(columns={'number_of_stores':'Number of Stores'}))
+    inc = (df[df['Quantity']>=2]
+           .groupby(['Retailer','SKU'])
+           .agg(number_of_stores=('Store','nunique'))
+           .reset_index()
+           .rename(columns={'number_of_stores':'Number of Stores'}))
+    crit = (df[df['Quantity']==1]
+            .groupby(['Retailer','SKU'])
+            .agg(number_of_stores=('Store','nunique'))
+            .reset_index()
+            .rename(columns={'number_of_stores':'Number of Stores'}))
+    return out, inc, crit, df
 
 out_of_stock = in_stock = critical_stock = df = None
 
 if uploaded_file is not None:
     try:
         df = pd.read_excel(uploaded_file, engine="openpyxl")
-        df = apply_sku_mapping_and_ignore(df)
+        df = apply_sku_rules(df)
     except Exception as e:
-        st.error(f"Error reading the Excel file: {e}")
+        st.error(f"Error reading Excel: {e}")
     else:
         uploaded_file.seek(0)
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -190,115 +175,98 @@ if uploaded_file is not None:
             df.to_csv("raw_data.csv", index=False)
             st.success("Data uploaded and processed successfully!")
 else:
-    # load existing CSVs & normalize
     if os.path.exists("raw_data.csv"):
         df = pd.read_csv("raw_data.csv")
-        df = apply_sku_mapping_and_ignore(df)
+        df = apply_sku_rules(df)
     if os.path.exists("out_of_stock.csv"):
         out_of_stock = pd.read_csv("out_of_stock.csv")
         if 'number_of_stores' in out_of_stock.columns:
-            out_of_stock = out_of_stock.rename(columns={'number_of_stores': 'Number of Stores'})
+            out_of_stock = out_of_stock.rename(columns={'number_of_stores':'Number of Stores'})
     if os.path.exists("in_stock.csv"):
         in_stock = pd.read_csv("in_stock.csv")
         if 'number_of_stores' in in_stock.columns:
-            in_stock = in_stock.rename(columns={'number_of_stores': 'Number of Stores'})
+            in_stock = in_stock.rename(columns={'number_of_stores':'Number of Stores'})
     if os.path.exists("critical_stock.csv"):
         critical_stock = pd.read_csv("critical_stock.csv")
         if 'number_of_stores' in critical_stock.columns:
-            critical_stock = critical_stock.rename(columns={'number_of_stores': 'Number of Stores'})
+            critical_stock = critical_stock.rename(columns={'number_of_stores':'Number of Stores'})
 
 # ------------------------------------------------------------------------
-# 5. Load Latest from S3 (Debugging)
+# 5. Load latest S3
 # ------------------------------------------------------------------------
 if st.button("Load Latest Report from S3"):
     key = get_latest_file_from_s3(BUCKET_NAME)
     if key:
-        st.write(f"Loading latest file from S3: {key}")
         buf = download_from_s3(BUCKET_NAME, key)
         content = buf.getvalue()
-        st.write("File size (bytes):", len(content))
-        with open("temp_download.xlsx", "wb") as f:
-            f.write(content)
-        st.write("Saved temp_download.xlsx for inspection.")
+        st.write(f"Loaded {key} ({len(content)} bytes)")
+        with open("temp_download.xlsx","wb") as f: f.write(content)
         try:
             new_df = pd.read_excel(buf, engine="openpyxl")
-            new_df = apply_sku_mapping_and_ignore(new_df)
+            new_df = apply_sku_rules(new_df)
             st.dataframe(new_df.head())
         except Exception as e:
-            st.error(f"Error reading Excel file: {e}")
-            st.write("First 500 bytes:", content[:500])
+            st.error(f"Error reading S3 Excel: {e}")
+            st.write(content[:500])
     else:
-        st.warning("No files found in S3!")
+        st.warning("No files in S3!")
 
 # ------------------------------------------------------------------------
-# 6. Dashboards (Local Data + Rounded Averages)
+# 6. Dashboards
 # ------------------------------------------------------------------------
 if df is not None:
-    # Out-of-Stock Summary by Retailer (Number of Situations)
+    # apply store filter to df for summary
+    df = filter_ignored_stores(df)
+
+    # Out of Stock summary
     if out_of_stock is not None:
-        out_of_stock_by_retailer = (
-            out_of_stock.groupby('Retailer')['Number of Stores']
-                     .sum()
-                     .reset_index(name='Number of Situations')
-        )
+        summary = (out_of_stock.groupby('Retailer')['Number of Stores']
+                         .sum()
+                         .reset_index(name='Number of Situations'))
     else:
-        tmp = (
-            df[df['Quantity'] <= 0]
-              .groupby('Retailer')
-              .agg(total_out_of_stock=('Store', 'nunique'))
-              .reset_index()
-              .rename(columns={'total_out_of_stock': 'Number of Situations'})
-        )
-        out_of_stock_by_retailer = tmp
+        tmp = (df[df['Quantity']<=0]
+               .groupby('Retailer')
+               .agg(total_out_of_stock=('Store','nunique'))
+               .reset_index()
+               .rename(columns={'total_out_of_stock':'Number of Situations'}))
+        summary = tmp
 
-    st.markdown("<h3 style='text-align: center;'>Out of Stock Situations (by Retailer)</h3>",
-                unsafe_allow_html=True)
-    st.dataframe(out_of_stock_by_retailer)
+    st.markdown("<h3 style='text-align: center;'>Out of Stock Situations (by Retailer)</h3>", unsafe_allow_html=True)
+    st.dataframe(summary)
 
-    # Detailed Out-of-Stock
-    details = (
-        df[df['Quantity'] <= 0][['Retailer', 'Store', 'SKU']]
-        .drop_duplicates()
-        .reset_index(drop=True)
-    )
+    # Detailed Out-of-Stock (filtered)
+    details = (df[df['Quantity']<=0][['Retailer','Store','SKU']]
+               .drop_duplicates()
+               .reset_index(drop=True))
+    details = details[~details['Store'].isin(IGNORED_STORES)]
     for r in details['Retailer'].unique():
         with st.expander(f"View {r} Out-of-Stock Stores"):
-            st.dataframe(details[details['Retailer'] == r])
+            st.dataframe(details[details['Retailer']==r])
 
-    # Average Units per SKU & Sum-of-Averages
-    avg_stock_by_sku = (
-        df.groupby(['Retailer', 'SKU'])
-          .agg(avg_stock=('Quantity', 'mean'))
-          .reset_index()
-    )
-    sum_of_avg = (
-        avg_stock_by_sku.groupby('Retailer')['avg_stock']
-        .sum()
-        .reset_index(name='sum_of_avg_stock')
-    )
+    # Average units per SKU and sum-of-averages
+    avg_sku = (df.groupby(['Retailer','SKU'])
+                 .agg(avg_stock=('Quantity','mean'))
+                 .reset_index())
+    sum_avg = (avg_sku.groupby('Retailer')['avg_stock']
+                 .sum()
+                 .reset_index(name='sum_of_avg_stock'))
+    avg_sku['avg_stock'] = avg_sku['avg_stock'].round(1)
+    sum_avg['sum_of_avg_stock'] = sum_avg['sum_of_avg_stock'].round(1)
 
-    avg_stock_by_sku['avg_stock'] = avg_stock_by_sku['avg_stock'].round(1)
-    sum_of_avg['sum_of_avg_stock'] = sum_of_avg['sum_of_avg_stock'].round(1)
-
-    st.markdown("<h3 style='text-align: center;'>Average Units of Stock per Store</h3>",
-                unsafe_allow_html=True)
-    choice = st.radio("Choose display option for average stock:",
-                      ("Overall per Retailer", "Breakdown by SKU"))
-    if choice == "Overall per Retailer":
-        st.dataframe(sum_of_avg)
+    st.markdown("<h3 style='text-align: center;'>Average Units of Stock per Store</h3>", unsafe_allow_html=True)
+    opt = st.radio("Choose display option for average stock:", ("Overall per Retailer","Breakdown by SKU"))
+    if opt=="Overall per Retailer":
+        st.dataframe(sum_avg)
     else:
-        st.dataframe(avg_stock_by_sku)
+        st.dataframe(avg_sku)
 
-    # Other Dashboards
+    # Other dashboards
     if out_of_stock is not None:
-        st.markdown("<h3 style='text-align: center;'>Out of Stock (0 units or less) ❌</h3>",
-                    unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align: center;'>Out of Stock (0 units or less) ❌</h3>", unsafe_allow_html=True)
         st.dataframe(out_of_stock)
     if critical_stock is not None:
-        st.markdown("<h3 style='text-align: center;'>Critical Stock Levels (1 unit) ⚠️</h3>",
-                    unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align: center;'>Critical Stock Levels (1 unit) ⚠️</h3>", unsafe_allow_html=True)
         st.dataframe(critical_stock)
     if in_stock is not None:
-        st.markdown("<h3 style='text-align: center;'>In Stock (2 or more units) ✅</h3>",
-                    unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align: center;'>In Stock (2 or more units) ✅</h3>", unsafe_allow_html=True)
         st.dataframe(in_stock)
