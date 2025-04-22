@@ -20,6 +20,15 @@ IGNORED_STORES = [
 ]
 
 # ------------------------------------------------------------------------
+# Configuration: rename SKUs
+# ------------------------------------------------------------------------
+SKU_MAPPING = {
+    "OLD_SKU_123": "NEW_REF_ABC",
+    "OLD_SKU_456": "NEW_REF_DEF",
+    # add more old_sku: new_reference pairs here
+}
+
+# ------------------------------------------------------------------------
 # 1. Set up your S3 information
 # ------------------------------------------------------------------------
 BUCKET_NAME = "my-retail-uploads"
@@ -65,8 +74,7 @@ st.markdown("""
 
 col1, col2 = st.columns([0.8, 0.2])
 with col1:
-    st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>",
-                unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>", unsafe_allow_html=True)
 with col2:
     st.image("homerbook.png", width=100)
 
@@ -88,18 +96,20 @@ else:
 uploaded_file = st.file_uploader("Upload your weekly Excel file (.xlsx)", type="xlsx")
 
 def process_data(df):
-    # Drop ignored stores first
+    # 0) Rename SKUs
+    df['SKU'] = df['SKU'].map(lambda s: SKU_MAPPING.get(s, s))
+    # 1) Drop ignored stores
     if IGNORED_STORES:
         df = df[~df['Store'].isin(IGNORED_STORES)]
-
+    # 2) Validate columns
     required = {'Retailer', 'SKU', 'Store', 'Quantity'}
     if not required.issubset(df.columns):
         st.error("The file must have the columns: Retailer, SKU, Store, Quantity")
         return None, None, None, None
-
+    # 3) Filter to first 5 retailers
     retailers = df['Retailer'].unique()[:5]
     df = df[df['Retailer'].isin(retailers)]
-
+    # 4) Compute out/in/critical stock
     out_of_stock = (
         df[df['Quantity'] <= 0]
           .groupby(['Retailer', 'SKU'])
@@ -121,7 +131,6 @@ def process_data(df):
           .reset_index()
           .rename(columns={'number_of_stores': 'Number of Stores'})
     )
-
     return out_of_stock, in_stock, critical_stock, df
 
 out_of_stock = in_stock = critical_stock = df = None
@@ -136,7 +145,6 @@ if uploaded_file is not None:
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         fname = f"weekly-report-{ts}.xlsx"
         upload_to_s3(uploaded_file, fname)
-
         out_of_stock, in_stock, critical_stock, df = process_data(df)
         if out_of_stock is not None:
             out_of_stock.to_csv("out_of_stock.csv", index=False)
@@ -145,7 +153,7 @@ if uploaded_file is not None:
             df.to_csv("raw_data.csv", index=False)
             st.success("Data uploaded and processed successfully!")
 else:
-    # Load existing CSVs and rename old columns
+    # Load existing CSVs and normalize columns
     if os.path.exists("raw_data.csv"):
         df = pd.read_csv("raw_data.csv")
     if os.path.exists("out_of_stock.csv"):
