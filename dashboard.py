@@ -93,17 +93,17 @@ def process_data(df):
 
     out_of_stock = df[df['Quantity'] <= 0]\
         .groupby(['Retailer', 'SKU'])\
-        .agg(number_of_stores=('Store', 'nunique'))\
+        .agg(Number of Stores=('Store', 'nunique'))\
         .reset_index()
 
     in_stock = df[df['Quantity'] >= 2]\
         .groupby(['Retailer', 'SKU'])\
-        .agg(number_of_stores=('Store', 'nunique'))\
+        .agg(Number of Stores=('Store', 'nunique'))\
         .reset_index()
 
     critical_stock = df[df['Quantity'] == 1]\
         .groupby(['Retailer', 'SKU'])\
-        .agg(number_of_stores=('Store', 'nunique'))\
+        .agg(Number of Stores=('Store', 'nunique'))\
         .reset_index()
 
     return out_of_stock, in_stock, critical_stock, df
@@ -170,7 +170,7 @@ if st.button("Load Latest Report from S3"):
 if df is not None:
     # Out of Stock by Retailer
     if out_of_stock is not None:
-        out_of_stock_by_retailer = out_of_stock.groupby('Retailer')['number_of_stores']\
+        out_of_stock_by_retailer = out_of_stock.groupby('Retailer')['Number of Situations']\
                                               .sum().reset_index()
     else:
         out_of_stock_by_retailer = df[df['Quantity'] <= 0]\
