@@ -40,6 +40,11 @@ SKU_MAPPING = {
     "SUMUP 3G PAYMENT KIT/PRINTER PK1 DNO": "3G PK",
     "DX SUMUP AIR CARD PAYMENT DEVICE PK1": "Air",
     "DX SUMUP 3G CARD PAYMENT DEVICE PK1 DNO": "3G",
+    "3593051055-SumUp Air Card Reader-A Smarter Way to Get Paid": "Air",
+    "3597012311-SumUp Solo Smart Card Terminal-": "Solo",
+    "3597012312-SumUp AirPlus Cradle Bundle-": "Air Bundle",
+    "3597012314-SumUp POS Lite Solo Bundle-": "POS Lite",
+    "1250000000-SumUp Solo+ Printer-Payment Card Reader": "Solo & Printer",
 }
 
 # ------------------------------------------------------------------------
