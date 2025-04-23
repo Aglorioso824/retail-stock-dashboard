@@ -5,6 +5,7 @@ from datetime import datetime
 from io import BytesIO
 import os
 
+
 # ------------------------------------------------------------------------
 # Configuration: stores to ignore
 # ------------------------------------------------------------------------
