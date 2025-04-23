@@ -43,7 +43,7 @@ SKU_MAPPING = {
 }
 
 # ------------------------------------------------------------------------
-# Configuration: SKUs to ignore
+# Configuration: SKUs to ignore entirely
 # ------------------------------------------------------------------------
 IGNORED_SKUS = [
     "SUMUP 3G PAYMENT KIT/PRINTER PK1 DNO",
@@ -68,7 +68,8 @@ def upload_to_s3(buf, fname):
 
 def get_latest_file_from_s3(bucket):
     resp = s3_client.list_objects_v2(Bucket=bucket)
-    if "Contents" not in resp: return None
+    if "Contents" not in resp:
+        return None
     objs = sorted(resp["Contents"], key=lambda x: x["LastModified"], reverse=True)
     return objs[0]["Key"]
 
@@ -113,7 +114,9 @@ else:
 # Helpers: SKU mapping + ignore, Store filtering
 # ------------------------------------------------------------------------
 def apply_sku_rules(df):
+    # rename SKUs
     df['SKU'] = df['SKU'].map(lambda s: SKU_MAPPING.get(s, s))
+    # drop ignored SKUs
     if IGNORED_SKUS:
         df = df[~df['SKU'].isin(IGNORED_SKUS)]
     return df
@@ -200,7 +203,8 @@ if st.button("Load Latest Report from S3"):
         buf = download_from_s3(BUCKET_NAME, key)
         content = buf.getvalue()
         st.write(f"Loaded {key} ({len(content)} bytes)")
-        with open("temp_download.xlsx","wb") as f: f.write(content)
+        with open("temp_download.xlsx","wb") as f:
+            f.write(content)
         try:
             new_df = pd.read_excel(buf, engine="openpyxl")
             new_df = apply_sku_rules(new_df)
@@ -215,35 +219,31 @@ if st.button("Load Latest Report from S3"):
 # 6. Dashboards
 # ------------------------------------------------------------------------
 if df is not None:
-    # apply store filter to df for summary
+    # ensure store filter applied for summary
     df = filter_ignored_stores(df)
 
-    # Out of Stock summary
+    # Out-of-Stock Summary by Retailer
     if out_of_stock is not None:
         summary = (out_of_stock.groupby('Retailer')['Number of Stores']
-                         .sum()
-                         .reset_index(name='Number of Situations'))
+                          .sum()
+                          .reset_index(name='Number of Situations'))
     else:
-        tmp = (df[df['Quantity']<=0]
-               .groupby('Retailer')
-               .agg(total_out_of_stock=('Store','nunique'))
-               .reset_index()
-               .rename(columns={'total_out_of_stock':'Number of Situations'}))
-        summary = tmp
+        summary = (df[df['Quantity']<=0]
+                   .groupby('Retailer')
+                   .agg(total_out_of_stock=('Store','nunique'))
+                   .reset_index()
+                   .rename(columns={'total_out_of_stock':'Number of Situations'}))
 
     st.markdown("<h3 style='text-align: center;'>Out of Stock Situations (by Retailer)</h3>", unsafe_allow_html=True)
     st.dataframe(summary)
 
-    # Detailed Out-of-Stock (filtered)
-    details = (df[df['Quantity']<=0][['Retailer','Store','SKU']]
-               .drop_duplicates()
-               .reset_index(drop=True))
-    details = details[~details['Store'].isin(IGNORED_STORES)]
+    # Detailed Out-of-Stock: show every SKU–Store pair
+    details = df[df['Quantity'] <= 0][['Retailer','Store','SKU']]
     for r in details['Retailer'].unique():
         with st.expander(f"View {r} Out-of-Stock Stores"):
-            st.dataframe(details[details['Retailer']==r])
+            st.dataframe(details[details['Retailer'] == r])
 
-    # Average units per SKU and sum-of-averages
+    # Average units per SKU & sum-of-averages
     avg_sku = (df.groupby(['Retailer','SKU'])
                  .agg(avg_stock=('Quantity','mean'))
                  .reset_index())
@@ -254,8 +254,8 @@ if df is not None:
     sum_avg['sum_of_avg_stock'] = sum_avg['sum_of_avg_stock'].round(1)
 
     st.markdown("<h3 style='text-align: center;'>Average Units of Stock per Store</h3>", unsafe_allow_html=True)
-    opt = st.radio("Choose display option for average stock:", ("Overall per Retailer","Breakdown by SKU"))
-    if opt=="Overall per Retailer":
+    opt = st.radio("Display average stock as:", ("Overall per Retailer","Breakdown by SKU"))
+    if opt == "Overall per Retailer":
         st.dataframe(sum_avg)
     else:
         st.dataframe(avg_sku)
