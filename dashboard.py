@@ -50,6 +50,12 @@ IGNORED_SKUS = [
     "DX SUMUP 3G CARD PAYMENT DEVICE PK1 DNO",
     "613971    :  SP6 SP6 SUMUP  3G+ PK",
     "226-902600701",
+    "3597012300-SumUp Air Cradle-Docking Station White",
+    "3597012310-SumUp Air Reader and Cradle-Bundle White",
+    "3597016543-SumUp 3G + Wifi Payment Reader-Standalone Card White",
+    "3597016544-SumUp 3G Payment Kit-",
+    "3597012301-Solo SumUp Card Reader-",
+    "3597012313-Sumup Point of Sale Lite-",
 ]
 
 # ------------------------------------------------------------------------
