@@ -114,17 +114,16 @@ else:
 # Helpers: apply SKU rules, filter stores
 # ------------------------------------------------------------------------
 def apply_sku_rules(df: pd.DataFrame) -> pd.DataFrame:
-    # rename SKUs
     df['SKU'] = df['SKU'].map(lambda s: SKU_MAPPING.get(s, s))
-    # drop ignored SKUs
     if IGNORED_SKUS:
         df = df[~df['SKU'].isin(IGNORED_SKUS)]
     return df
 
 def filter_ignored_stores(df: pd.DataFrame) -> pd.DataFrame:
-    if IGNORED_STORES:
-        df = df[~df['Store'].isin(IGNORED_STORES)]
-    return df
+    # normalize and strip Store values
+    df['Store'] = df['Store'].astype(str).str.strip().str.upper()
+    ignored = [s.strip().upper() for s in IGNORED_STORES]
+    return df[~df['Store'].isin(ignored)]
 
 # ------------------------------------------------------------------------
 # 4. File upload & process
@@ -132,20 +131,14 @@ def filter_ignored_stores(df: pd.DataFrame) -> pd.DataFrame:
 uploaded_file = st.file_uploader("Upload your weekly Excel file (.xlsx)", type="xlsx")
 
 def process_data(df: pd.DataFrame):
-    # apply both filters up‐front
     df = apply_sku_rules(df)
     df = filter_ignored_stores(df)
-
     required = {'Retailer','SKU','Store','Quantity'}
     if not required.issubset(df.columns):
         st.error("File must have Retailer, SKU, Store, Quantity")
         return None, None, None, None
-
-    # only first 5 retailers
     retailers = df['Retailer'].unique()[:5]
     df = df[df['Retailer'].isin(retailers)]
-
-    # compute out/in/critical
     out = (
         df[df['Quantity']<=0]
           .groupby(['Retailer','SKU'])
@@ -177,12 +170,10 @@ if uploaded_file:
     except Exception as e:
         st.error(f"Error reading Excel: {e}")
     else:
-        # upload raw file
         uploaded_file.seek(0)
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         fname = f"weekly-report-{ts}.xlsx"
         upload_to_s3(uploaded_file, fname)
-        # process & overwrite CSVs
         out_of_stock, in_stock, critical_stock, df = process_data(df)
         if out_of_stock is not None:
             out_of_stock.to_csv("out_of_stock.csv", index=False)
@@ -191,7 +182,6 @@ if uploaded_file:
             df.to_csv("raw_data.csv", index=False)
             st.success("Data uploaded and processed successfully!")
 else:
-    # always re-process raw_data.csv to enforce ignores
     if os.path.exists("raw_data.csv"):
         df = pd.read_csv("raw_data.csv")
         out_of_stock, in_stock, critical_stock, df = process_data(df)
@@ -207,7 +197,6 @@ if st.button("Load Latest Report from S3"):
         st.write(f"Loaded {key} ({len(content)} bytes)")
         try:
             new_df = pd.read_excel(buf, engine="openpyxl")
-            # apply filters
             new_df = apply_sku_rules(new_df)
             new_df = filter_ignored_stores(new_df)
             st.dataframe(new_df.head())
@@ -221,7 +210,6 @@ if st.button("Load Latest Report from S3"):
 # 6. Dashboards
 # ------------------------------------------------------------------------
 if df is not None:
-    # summary: sum of SKU–Store pairs
     summary = (
         out_of_stock
           .groupby('Retailer')['Number of Stores']
@@ -231,13 +219,11 @@ if df is not None:
     st.markdown("<h3 style='text-align: center;'>Out of Stock Situations (by Retailer)</h3>", unsafe_allow_html=True)
     st.dataframe(summary)
 
-    # detail: every SKU–Store row
     details = df[df['Quantity']<=0][['Retailer','Store','SKU']]
     for r in details['Retailer'].unique():
         with st.expander(f"View {r} Out-of-Stock Stores"):
             st.dataframe(details[details['Retailer']==r])
 
-    # averages
     avg_sku = (
         df.groupby(['Retailer','SKU'])
           .agg(avg_stock=('Quantity','mean'))
@@ -258,7 +244,6 @@ if df is not None:
     else:
         st.dataframe(avg_sku)
 
-    # other dashboards
     st.markdown("<h3 style='text-align: center;'>Out of Stock (0 units or less) ❌</h3>", unsafe_allow_html=True)
     st.dataframe(out_of_stock)
     st.markdown("<h3 style='text-align: center;'>Critical Stock Levels (1 unit) ⚠️</h3>", unsafe_allow_html=True)
