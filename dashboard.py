@@ -93,7 +93,6 @@ IGNORED_SKUS = [
     "3597012313-Sumup Point of Sale Lite-",
     "SUMUP AIR CHARGING CRADLE CHARGER EACH",
     "SUMUP 3G+ WIFI CARD READER PAYMENT KIT EACH",
-    
 ]
 
 # ------------------------------------------------------------------------
