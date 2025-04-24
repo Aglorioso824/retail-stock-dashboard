@@ -9,6 +9,7 @@ import os
 # Configuration: stores to ignore
 # ------------------------------------------------------------------------
 IGNORED_STORES = [
+    #CURRYS STORES
     "04944: CURRYS ONLINE 'OMS VIRTUAL'",
     "04947: PCW ONLINE OMS VIRTUAL",
     "04985: IRELAND ONLINE SMALLBOX DIRECT",
@@ -17,6 +18,7 @@ IGNORED_STORES = [
     "05089: PCWB ONLINE CUSTOMER RETURNS",
     "07099: NEWARK RDC",
     "07800: NATIONAL RETURNS",
+    #TOOLSTATION STORES
     "(CLOSED) BOURNEMOUTH TOOLSTATION",
     "(CLOSED) BRIDGWATER TOOLSTATION",
     "(CLOSED) DUMFRIES TOOLSTATION",
