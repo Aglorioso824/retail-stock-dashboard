@@ -75,6 +75,7 @@ SKU_MAPPING = {
     "SUMUP AIR CARD READER EACH": "Air",
     "SUMUP SOLO SMART CARD TERMINAL EACH": "Solo",
     "SOLO & PRINTER BUNDLE RETAIL UK EACH": "Solo & Printer",
+    "POS LITE & SOLO BUNDLE UK EACH": "POS Lite",
 }
 
 # ------------------------------------------------------------------------
@@ -93,6 +94,7 @@ IGNORED_SKUS = [
     "3597012313-Sumup Point of Sale Lite-",
     "SUMUP AIR CHARGING CRADLE CHARGER EACH",
     "SUMUP 3G+ WIFI CARD READER PAYMENT KIT EACH",
+    "SUMUP 3G+ WIFI CARD READER EACH",
 ]
 
 # ------------------------------------------------------------------------
