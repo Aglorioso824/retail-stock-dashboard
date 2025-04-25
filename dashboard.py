@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import boto3
+import re
 from datetime import datetime
 from io import BytesIO
 import os
@@ -9,7 +10,7 @@ import os
 # Configuration: stores to ignore
 # ------------------------------------------------------------------------
 IGNORED_STORES = [
-    #CURRYS STORES
+    # CURRYS STORES
     "04944: CURRYS ONLINE 'OMS VIRTUAL'",
     "04947: PCW ONLINE OMS VIRTUAL",
     "04985: IRELAND ONLINE SMALLBOX DIRECT",
@@ -18,7 +19,7 @@ IGNORED_STORES = [
     "05089: PCWB ONLINE CUSTOMER RETURNS",
     "07099: NEWARK RDC",
     "07800: NATIONAL RETURNS",
-    #TOOLSTATION STORES
+    # TOOLSTATION STORES
     "(CLOSED) BOURNEMOUTH TOOLSTATION",
     "(CLOSED) BRIDGWATER TOOLSTATION",
     "(CLOSED) DUMFRIES TOOLSTATION",
@@ -113,12 +114,28 @@ def upload_to_s3(buf, fname):
     s3_client.upload_fileobj(buf, BUCKET_NAME, fname)
     st.success(f"Uploaded {fname} to S3")
 
-def get_latest_file_from_s3(bucket):
-    resp = s3_client.list_objects_v2(Bucket=bucket)
-    if "Contents" not in resp:
-        return None
-    objs = sorted(resp["Contents"], key=lambda x: x["LastModified"], reverse=True)
-    return objs[0]["Key"]
+def get_latest_file_from_s3(bucket_name: str, prefix: str = "weekly-report-") -> str | None:
+    """
+    Pages through all objects in bucket_name with the given prefix,
+    and returns the key of the object with the most recent LastModified.
+    """
+    paginator = s3_client.get_paginator("list_objects_v2")
+    pages = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
+
+    latest_key = None
+    latest_time = datetime(1970, 1, 1)
+    pattern = re.compile(rf"^{re.escape(prefix)}\d{{8}}-\d{{6}}.*\.xlsx$")
+
+    for page in pages:
+        for obj in page.get("Contents", []):
+            key = obj["Key"]
+            if not pattern.match(key):
+                continue
+            if obj["LastModified"] > latest_time:
+                latest_time = obj["LastModified"]
+                latest_key = key
+
+    return latest_key
 
 def download_from_s3(bucket, key):
     buf = BytesIO()
@@ -141,6 +158,7 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
+
 col1, col2 = st.columns([0.8, 0.2])
 with col1:
     st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>", unsafe_allow_html=True)
@@ -167,7 +185,6 @@ def apply_sku_rules(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def filter_ignored_stores(df: pd.DataFrame) -> pd.DataFrame:
-    # normalize and strip Store values
     df['Store'] = df['Store'].astype(str).str.strip().str.upper()
     ignored = [s.strip().upper() for s in IGNORED_STORES]
     return df[~df['Store'].isin(ignored)]
@@ -180,30 +197,33 @@ uploaded_file = st.file_uploader("Upload your weekly Excel file (.xlsx)", type="
 def process_data(df: pd.DataFrame):
     df = apply_sku_rules(df)
     df = filter_ignored_stores(df)
-    required = {'Retailer','SKU','Store','Quantity'}
+
+    required = {'Retailer', 'SKU', 'Store', 'Quantity'}
     if not required.issubset(df.columns):
         st.error("File must have Retailer, SKU, Store, Quantity")
         return None, None, None, None
+
     retailers = df['Retailer'].unique()[:5]
     df = df[df['Retailer'].isin(retailers)]
+
     out = (
-        df[df['Quantity']<=0]
-          .groupby(['Retailer','SKU'])
-          .agg(number_of_stores=('Store','nunique'))
+        df[df['Quantity'] <= 0]
+          .groupby(['Retailer', 'SKU'])
+          .agg(number_of_stores=('Store', 'nunique'))
           .reset_index()
           .rename(columns={'number_of_stores':'Number of Stores'})
     )
     inc = (
-        df[df['Quantity']>=2]
-          .groupby(['Retailer','SKU'])
-          .agg(number_of_stores=('Store','nunique'))
+        df[df['Quantity'] >= 2]
+          .groupby(['Retailer', 'SKU'])
+          .agg(number_of_stores=('Store', 'nunique'))
           .reset_index()
           .rename(columns={'number_of_stores':'Number of Stores'})
     )
     crit = (
-        df[df['Quantity']==1]
-          .groupby(['Retailer','SKU'])
-          .agg(number_of_stores=('Store','nunique'))
+        df[df['Quantity'] == 1]
+          .groupby(['Retailer', 'SKU'])
+          .agg(number_of_stores=('Store', 'nunique'))
           .reset_index()
           .rename(columns={'number_of_stores':'Number of Stores'})
     )
@@ -234,14 +254,14 @@ else:
         out_of_stock, in_stock, critical_stock, df = process_data(df)
 
 # ------------------------------------------------------------------------
-# 5. Load latest from S3 (optional)
+# 5. Load Latest from S3
 # ------------------------------------------------------------------------
 if st.button("Load Latest Report from S3"):
-    key = get_latest_file_from_s3(BUCKET_NAME)
-    if key:
-        buf = download_from_s3(BUCKET_NAME, key)
+    latest_key = get_latest_file_from_s3(BUCKET_NAME)
+    if latest_key:
+        buf = download_from_s3(BUCKET_NAME, latest_key)
         content = buf.getvalue()
-        st.write(f"Loaded {key} ({len(content)} bytes)")
+        st.write(f"Loaded {latest_key} ({len(content)} bytes)")
         try:
             new_df = pd.read_excel(buf, engine="openpyxl")
             new_df = apply_sku_rules(new_df)
