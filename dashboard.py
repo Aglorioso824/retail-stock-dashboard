@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import boto3
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from io import BytesIO
 import os
 
@@ -123,16 +123,18 @@ def get_latest_file_from_s3(bucket_name: str, prefix: str = "weekly-report-") ->
     pages = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
 
     latest_key = None
-    latest_time = datetime(1970, 1, 1)
+    # Initialize with a UTC‐aware datetime so comparisons won't fail
+    latest_time = datetime(1970, 1, 1, tzinfo=timezone.utc)
     pattern = re.compile(rf"^{re.escape(prefix)}\d{{8}}-\d{{6}}.*\.xlsx$")
 
     for page in pages:
         for obj in page.get("Contents", []):
             key = obj["Key"]
+            lm  = obj["LastModified"]  # this is tz‐aware
             if not pattern.match(key):
                 continue
-            if obj["LastModified"] > latest_time:
-                latest_time = obj["LastModified"]
+            if lm > latest_time:
+                latest_time = lm
                 latest_key = key
 
     return latest_key
@@ -286,14 +288,14 @@ if df is not None:
     st.markdown("<h3 style='text-align: center;'>Out of Stock Situations (by Retailer)</h3>", unsafe_allow_html=True)
     st.dataframe(summary)
 
-    details = df[df['Quantity']<=0][['Retailer','Store','SKU']]
+    details = df[df['Quantity'] <= 0][['Retailer', 'Store', 'SKU']]
     for r in details['Retailer'].unique():
         with st.expander(f"View {r} Out-of-Stock Stores"):
-            st.dataframe(details[details['Retailer']==r])
+            st.dataframe(details[details['Retailer'] == r])
 
     avg_sku = (
-        df.groupby(['Retailer','SKU'])
-          .agg(avg_stock=('Quantity','mean'))
+        df.groupby(['Retailer', 'SKU'])
+          .agg(avg_stock=('Quantity', 'mean'))
           .reset_index()
     )
     sum_avg = (
@@ -305,7 +307,7 @@ if df is not None:
     sum_avg['sum_of_avg_stock'] = sum_avg['sum_of_avg_stock'].round(1)
 
     st.markdown("<h3 style='text-align: center;'>Average Units of Stock per Store</h3>", unsafe_allow_html=True)
-    choice = st.radio("Display:", ("Overall per Retailer","Breakdown by SKU"))
+    choice = st.radio("Display:", ("Overall per Retailer", "Breakdown by SKU"))
     if choice == "Overall per Retailer":
         st.dataframe(sum_avg)
     else:
