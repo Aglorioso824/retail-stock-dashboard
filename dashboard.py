@@ -54,12 +54,31 @@ IGNORED_STORES = [
 # ------------------------------------------------------------------------
 SKU_MAPPING = {
     "226-800604901": "Air Bundle",
-    "226-802600101": "Air",
-    "226-802604501": "POS Lite",
-    "226-802610001": "Solo",
-    "226-802620001": "Solo & Printer",
-    "226-902600701": "3G",
-    # ... (other mappings) ...
+    "226-802600101": "Air",
+    "226-802604501": "POS Lite",
+    "226-802610001": "Solo",
+    "226-802620001": "Solo & Printer",
+    "226-902600701": "3G",
+    "386803    :  SP6 SP6 POS L &SOLO": "POS Lite",
+    "537815    :  SP6 SP6 SUMUP  SOLO": "Solo",
+    "604611    :  SP6 SUMUP AIR": "Air",
+    "660513    :  SP6 AIR BUNDL E": "Air Bundle",
+    "626938    :  SP6 SUMUPSOLL OPRNTER": "Solo & Printer",
+    "613971    :  SP6 SP6 SUMUP  3G+ PK": "3G PK",
+    "SUMUP AIR CRADLE BUNDLE PK1": "Air Bundle",
+    "SUMUP SOLO                PK1": "Solo",
+    "SUMUP 3G PAYMENT KIT/PRINTER PK1 DNO": "3G PK",
+    "DX SUMUP AIR CARD PAYMENT DEVICE PK1": "Air",
+    "DX SUMUP 3G CARD PAYMENT DEVICE PK1 DNO": "3G",
+    "3593051055-SumUp Air Card Reader-A Smarter Way to Get Paid": "Air",
+    "3597012311-SumUp Solo Smart Card Terminal-": "Solo",
+    "3597012312-SumUp AirPlus Cradle Bundle-": "Air Bundle",
+    "3597012314-SumUp POS Lite Solo Bundle-": "POS Lite",
+    "1250000000-SumUp Solo+ Printer-Payment Card Reader": "Solo & Printer",
+    "SUMUP AIR CARD READER EACH": "Air",
+    "SUMUP SOLO SMART CARD TERMINAL EACH": "Solo",
+    "SOLO & PRINTER BUNDLE RETAIL UK EACH": "Solo & Printer",
+    "POS LITE & SOLO BUNDLE UK EACH": "POS Lite",
 }
 
 # ------------------------------------------------------------------------
