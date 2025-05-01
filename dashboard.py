@@ -53,26 +53,18 @@ def download_from_s3(bucket, key):
     return buf
 
 # ------------------------------------------------------------------------
-# 2. UI styling
+# 2. UI: Centered Homer image above title
 # ------------------------------------------------------------------------
-st.markdown("""
-<style>
-[data-testid="stExpander"] > div:first-child > div > button {
-  background-color: #ffffe0 !important;
-  text-align: center !important;
-  width: 100%;
-}
-[data-testid="stExpander"] > div:nth-child(2) {
-  background-color: #ffffe0 !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-col1, col2 = st.columns([0.8, 0.2])
-with col1:
-    st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>", unsafe_allow_html=True)
-with col2:
-    st.image("homerbook.png", width=100)
+st.markdown(
+    "<div style='text-align: center; margin-bottom: 1rem;'>"
+    "<img src='homerbook.png' width='150' />"
+    "</div>",
+    unsafe_allow_html=True
+)
+st.markdown(
+    "<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>",
+    unsafe_allow_html=True
+)
 
 # ------------------------------------------------------------------------
 # 3. Last upload date
