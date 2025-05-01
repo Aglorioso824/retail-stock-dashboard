@@ -56,9 +56,11 @@ def download_from_s3(bucket, key):
 # 2. UI: Centered Homer image above title
 # ------------------------------------------------------------------------
 st.markdown(
-    "<div style='text-align: center; margin-bottom: 1rem;'>"
-    "<img src='homerbook.png' width='150' />"
-    "</div>",
+    """
+    <div style="display:flex; justify-content:center; margin-top:1rem; margin-bottom:1rem;">
+      <img src="homerbook.png" width="150" />
+    </div>
+    """,
     unsafe_allow_html=True
 )
 st.markdown(
