@@ -168,25 +168,30 @@ else:
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     if st.button("Load Latest Report from S3"):
-        # your S3‐reload logic here
-latest_key = get_latest_file_from_s3(BUCKET_NAME)
-    if not latest_key:
-        st.warning("No files found in S3!")
-    else:
-        buf = download_from_s3(BUCKET_NAME, latest_key)
-        st.write(f"✅ Loaded `{latest_key}` from S3")
-        try:
-            new_df = pd.read_excel(buf, engine="openpyxl")
-            new_df = apply_sku_rules(new_df)
-            new_df = filter_ignored_stores(new_df)
-            out_of_stock, in_stock, critical_stock, df = process_data(new_df)
-            out_of_stock.to_csv("out_of_stock.csv", index=False)
-            in_stock.to_csv("in_stock.csv", index=False)
-            critical_stock.to_csv("critical_stock.csv", index=False)
-            df.to_csv("raw_data.csv", index=False)
-            st.success("Dashboard refreshed with latest S3 report!")
-        except Exception as e:
-            st.error(f"Error processing latest S3 report: {e}")
+        latest_key = get_latest_file_from_s3(BUCKET_NAME)
+        if not latest_key:
+            st.warning("No files found in S3!")
+        else:
+            buf = download_from_s3(BUCKET_NAME, latest_key)
+            st.write(f"✅ Loaded `{latest_key}` from S3")
+            try:
+                # 1) Read & filter the new data
+                new_df = pd.read_excel(buf, engine="openpyxl")
+                new_df = apply_sku_rules(new_df)
+                new_df = filter_ignored_stores(new_df)
+
+                # 2) Re-run pipeline to recalc dashboards
+                out_of_stock, in_stock, critical_stock, df = process_data(new_df)
+
+                # 3) Persist for “last upload” header
+                out_of_stock.to_csv("out_of_stock.csv", index=False)
+                in_stock.to_csv("in_stock.csv", index=False)
+                critical_stock.to_csv("critical_stock.csv", index=False)
+                df.to_csv("raw_data.csv", index=False)
+
+                st.success("Dashboard refreshed with latest S3 report!")
+            except Exception as e:
+                st.error(f"Error processing latest S3 report: {e}")
 
 # ------------------------------------------------------------------------
 # 6. Dashboards
