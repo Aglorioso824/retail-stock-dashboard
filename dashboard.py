@@ -165,7 +165,10 @@ else:
 # ------------------------------------------------------------------------
 # 5. Load Latest from S3 AND re-process dashboards
 # ------------------------------------------------------------------------
-if st.button("Load Latest Report from S3"):
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    if st.button("Load Latest Report from S3"):
+        # your S3‐reload logic here
     latest_key = get_latest_file_from_s3(BUCKET_NAME)
     if not latest_key:
         st.warning("No files found in S3!")
