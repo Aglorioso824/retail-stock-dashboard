@@ -53,18 +53,26 @@ def download_from_s3(bucket, key):
     return buf
 
 # ------------------------------------------------------------------------
-# 2. UI: Homer image slightly right of center above title
+# 2. UI styling
 # ------------------------------------------------------------------------
-# Create four columns with ratios [1, 2, 1, 1] and render the image in the 3rd
-col1, col2, col3, col4 = st.columns([1, 2, 1, 1])
-with col3:
-    st.image("homerbook.png", width=150)
+st.markdown("""
+<style>
+[data-testid="stExpander"] > div:first-child > div > button {
+  background-color: #ffffe0 !important;
+  text-align: center !important;
+  width: 100%;
+}
+[data-testid="stExpander"] > div:nth-child(2) {
+  background-color: #ffffe0 !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
-# Then render the title centered beneath it
-st.markdown(
-    "<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>",
-    unsafe_allow_html=True
-)
+col1, col2 = st.columns([0.8, 0.2])
+with col1:
+    st.markdown("<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>", unsafe_allow_html=True)
+with col2:
+    st.image("homerbook.png", width=100)
 
 # ------------------------------------------------------------------------
 # 3. Last upload date
