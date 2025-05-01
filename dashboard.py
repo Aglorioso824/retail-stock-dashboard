@@ -53,12 +53,14 @@ def download_from_s3(bucket, key):
     return buf
 
 # ------------------------------------------------------------------------
-# 2. UI: Centered Homer image above title
+# 2. UI: Homer image slightly right of center above title
 # ------------------------------------------------------------------------
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
+# Create four columns with ratios [1, 2, 1, 1] and render the image in the 3rd
+col1, col2, col3, col4 = st.columns([1, 2, 1, 1])
+with col3:
     st.image("homerbook.png", width=150)
 
+# Then render the title centered beneath it
 st.markdown(
     "<h1 style='text-align: center;'>Welcome, Retail SumUpper</h1>",
     unsafe_allow_html=True
