@@ -41,6 +41,7 @@ IGNORED_STORES = [
     "(CLOSED) BICESTER TOOLSTATION",
     "(CLOSED) EXETER TOOLSTATION",
     "(CLOSED) CLEARANCE CORNER TOOLSTATION",
+    "CONTACT CENTRE TOOLSTATION"
 ]
 
 # ------------------------------------------------------------------------
