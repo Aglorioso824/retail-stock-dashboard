@@ -46,6 +46,7 @@ IGNORED_STORES = [
     # SCREWFIX STORES
     "WWW.SCREWFIX.COM"
     "SCREWFIX LIVE"
+    "SCREWFIX.IE"
 ]
 
 # ------------------------------------------------------------------------
