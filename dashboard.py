@@ -195,20 +195,39 @@ if st.button("Load Latest Report from S3"):
 # 6. Dashboards
 # ------------------------------------------------------------------------
 if df is not None:
+    # Summary table
     summary = (
         out_of_stock
           .groupby('Retailer')['Number of Stores']
           .sum()
           .reset_index(name='Number of Situations')
     )
-    st.markdown("<h3 style='text-align: center;'>Out of Stock Situations (by Retailer)</h3>", unsafe_allow_html=True)
+
+    # Header with “What is a Situation?” expander
+    cols = st.columns([0.8, 0.2])
+    with cols[0]:
+        st.markdown(
+            "<h3 style='text-align: center;'>Out of Stock Situations (by Retailer)</h3>",
+            unsafe_allow_html=True
+        )
+    with cols[1]:
+        with st.expander("What is a Situation?"):
+            st.write(
+                "An Out of Stock Situation is when any SKU is out of stock. "
+                "It does not refer to the number of stores. For example, there could "
+                "be 1× out of stock store, with 2× out of stock situations in it "
+                "(e.g., POS Lite and Air)."
+            )
+
     st.dataframe(summary)
 
+    # Detailed per-store views
     details = df[df['Quantity'] <= 0][['Retailer', 'Store', 'SKU']]
     for r in details['Retailer'].unique():
         with st.expander(f"View {r} Out-of-Stock Stores"):
             st.dataframe(details[details['Retailer'] == r])
 
+    # Average stock tables
     avg_sku = (
         df.groupby(['Retailer', 'SKU'])
           .agg(avg_stock=('Quantity','mean'))
@@ -229,6 +248,7 @@ if df is not None:
     else:
         st.dataframe(avg_sku)
 
+    # Final breakdowns
     st.markdown("<h3 style='text-align: center;'>Out of Stock (0 units or less) ❌</h3>", unsafe_allow_html=True)
     st.dataframe(out_of_stock)
     st.markdown("<h3 style='text-align: center;'>Critical Stock Levels (1 unit) ⚠️</h3>", unsafe_allow_html=True)
