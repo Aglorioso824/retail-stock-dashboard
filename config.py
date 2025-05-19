@@ -43,6 +43,9 @@ IGNORED_STORES = [
     "(CLOSED) EXETER TOOLSTATION",
     "(CLOSED) CLEARANCE CORNER TOOLSTATION",
     "CONTACT CENTRE TOOLSTATION"
+    # SCREWFIX STORES
+    "WWW.SCREWFIX.COM"
+    "SCREWFIX LIVE"
 ]
 
 # ------------------------------------------------------------------------
