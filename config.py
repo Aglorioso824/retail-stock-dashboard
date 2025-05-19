@@ -77,6 +77,8 @@ SKU_MAPPING = {
     "POS LITE & SOLO BUNDLE UK EACH": "POS Lite",
     "226-RDR-SUL-004": "Solo Lite",
     "226-BUN-SUL-003": "Solo Lite Bundle",
+    "SUM UP AIR CONTACTLESS CARD READER": "Air",
+    "SUMUP SOLO SMART CARD TERMINAL": "Solo",
 }
 
 # ------------------------------------------------------------------------
