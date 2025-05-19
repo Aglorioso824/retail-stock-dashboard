@@ -23,10 +23,6 @@ def upload_to_s3(buf, fname):
     st.success(f"Uploaded {fname} to S3")
 
 def get_latest_file_from_s3(bucket_name: str, prefix: str = "weekly-report-") -> str | None:
-    """
-    Pages through all objects in bucket_name with the given prefix,
-    and returns the key of the object with the most recent LastModified.
-    """
     paginator = s3_client.get_paginator("list_objects_v2")
     pages = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
 
@@ -36,13 +32,10 @@ def get_latest_file_from_s3(bucket_name: str, prefix: str = "weekly-report-") ->
 
     for page in pages:
         for obj in page.get("Contents", []):
-            key = obj["Key"]
-            lm = obj["LastModified"]
-            if not pattern.match(key):
-                continue
+            key = obj["Key"]; lm = obj["LastModified"]
+            if not pattern.match(key): continue
             if lm > latest_time:
-                latest_time = lm
-                latest_key = key
+                latest_time, latest_key = lm, key
 
     return latest_key
 
@@ -80,9 +73,11 @@ with col2:
 if os.path.exists("out_of_stock.csv"):
     ts = os.path.getmtime("out_of_stock.csv")
     date = datetime.fromtimestamp(ts).strftime("%d/%m/%Y")
-    st.markdown(f"<p style='text-align: center;'>Last Data Upload Date: {date}</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align: center;'>Last Data Upload Date: {date}</p>",
+                unsafe_allow_html=True)
 else:
-    st.markdown("<p style='text-align: center;'>No data uploaded yet.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>No data uploaded yet.</p>",
+                unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------
 # Helpers: apply SKU rules, filter stores
@@ -173,20 +168,14 @@ if st.button("Load Latest Report from S3"):
         buf = download_from_s3(BUCKET_NAME, latest_key)
         st.write(f"✅ Loaded `{latest_key}` from S3")
         try:
-            # 1) Read & filter the new data
             new_df = pd.read_excel(buf, engine="openpyxl")
             new_df = apply_sku_rules(new_df)
             new_df = filter_ignored_stores(new_df)
-
-            # 2) Re-run pipeline to recalc dashboards
             out_of_stock, in_stock, critical_stock, df = process_data(new_df)
-
-            # 3) Persist for “last upload” header
             out_of_stock.to_csv("out_of_stock.csv", index=False)
             in_stock.to_csv("in_stock.csv", index=False)
             critical_stock.to_csv("critical_stock.csv", index=False)
             df.to_csv("raw_data.csv", index=False)
-
             st.success("Dashboard refreshed with latest S3 report!")
         except Exception as e:
             st.error(f"Error processing latest S3 report: {e}")
@@ -195,30 +184,15 @@ if st.button("Load Latest Report from S3"):
 # 6. Dashboards
 # ------------------------------------------------------------------------
 if df is not None:
-    # Summary table
+    # Out-of-stock summary
     summary = (
         out_of_stock
           .groupby('Retailer')['Number of Stores']
           .sum()
           .reset_index(name='Number of Situations')
     )
-
-    # Header with “What is a Situation?” expander
-    cols = st.columns([0.8, 0.2])
-    with cols[0]:
-        st.markdown(
-            "<h3 style='text-align: center;'>Out of Stock Situations (by Retailer)</h3>",
-            unsafe_allow_html=True
-        )
-    with cols[1]:
-        with st.expander("What is a Situation?"):
-            st.write(
-                "An Out of Stock Situation is when any SKU is out of stock. "
-                "It does not refer to the number of stores. For example, there could "
-                "be 1× out of stock store, with 2× out of stock situations in it "
-                "(e.g., POS Lite and Air)."
-            )
-
+    st.markdown("<h3 style='text-align: center;'>Out of Stock Situations (by Retailer)</h3>",
+                unsafe_allow_html=True)
     st.dataframe(summary)
 
     # Detailed per-store views
@@ -227,7 +201,21 @@ if df is not None:
         with st.expander(f"View {r} Out-of-Stock Stores"):
             st.dataframe(details[details['Retailer'] == r])
 
+    # --- Centered “What is a Situation?” expander just above the Average section ---
+    cols = st.columns([1, 1, 1])
+    # middle column only
+    with cols[1]:
+        with st.expander("What is a situation?"):
+            st.write(
+                "An Out of Stock Situation is when any SKU is out of stock. "
+                "It does not refer to the number of stores. For example, there could "
+                "be 1× out of stock store, with 2× out of stock situations in it "
+                "(e.g., POS Lite and Air)."
+            )
+
     # Average stock tables
+    st.markdown("<h3 style='text-align: center;'>Average Units of Stock per Store</h3>",
+                unsafe_allow_html=True)
     avg_sku = (
         df.groupby(['Retailer', 'SKU'])
           .agg(avg_stock=('Quantity','mean'))
@@ -241,7 +229,6 @@ if df is not None:
     avg_sku['avg_stock'] = avg_sku['avg_stock'].round(1)
     sum_avg['sum_of_avg_stock'] = sum_avg['sum_of_avg_stock'].round(1)
 
-    st.markdown("<h3 style='text-align: center;'>Average Units of Stock per Store</h3>", unsafe_allow_html=True)
     choice = st.radio("Display:", ("Overall per Retailer", "Breakdown by SKU"))
     if choice == "Overall per Retailer":
         st.dataframe(sum_avg)
@@ -249,9 +236,12 @@ if df is not None:
         st.dataframe(avg_sku)
 
     # Final breakdowns
-    st.markdown("<h3 style='text-align: center;'>Out of Stock (0 units or less) ❌</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center;'>Out of Stock (0 units or less) ❌</h3>",
+                unsafe_allow_html=True)
     st.dataframe(out_of_stock)
-    st.markdown("<h3 style='text-align: center;'>Critical Stock Levels (1 unit) ⚠️</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center;'>Critical Stock Levels (1 unit) ⚠️</h3>",
+                unsafe_allow_html=True)
     st.dataframe(critical_stock)
-    st.markdown("<h3 style='text-align: center;'>In Stock (2 or more units) ✅</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center;'>In Stock (2 or more units) ✅</h3>",
+                unsafe_allow_html=True)
     st.dataframe(in_stock)
