@@ -75,6 +75,8 @@ SKU_MAPPING = {
     "SUMUP SOLO SMART CARD TERMINAL EACH": "Solo",
     "SOLO & PRINTER BUNDLE RETAIL UK EACH": "Solo & Printer",
     "POS LITE & SOLO BUNDLE UK EACH": "POS Lite",
+    "226-RDR-SUL-004": "Solo Lite",
+    "226-BUN-SUL-003": "Solo Lite Bundle",
 }
 
 # ------------------------------------------------------------------------
