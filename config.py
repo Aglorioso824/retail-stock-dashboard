@@ -102,8 +102,9 @@ IGNORED_SKUS = [
     "SUMUP 3G+ WIFI CARD READER EACH",
 ]
 
-# TOTAL_STORES maps each Retailer to its full store count
-TOTAL_STORES = {
+# TOTAL_LISTINGS maps each Retailer to its total listing count
+TOTAL_LISTINGS = {
     "Toolstation": 500,
-    "DID":  15,
+    "DID": 15,
 }
+
