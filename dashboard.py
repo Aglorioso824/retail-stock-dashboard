@@ -191,7 +191,7 @@ if df is not None:
           .sum()
           .reset_index(name='Number of Situations')
     )
-    st.markdown("<h3 style='text-align: center;'>Out of Stock Situations (by Retailer)</h3>",
+    st.markdown("<h3 style='text-align: center;'>Out of Stock Situations 😟 (by Retailer)</h3>",
                 unsafe_allow_html=True)
     st.dataframe(summary)
 
