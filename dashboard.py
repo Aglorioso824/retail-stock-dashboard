@@ -187,7 +187,7 @@ from config import TOTAL_STORES
 import pandas as pd
 
 if df is not None:
-    # Out-of-stock summary
+    # 1) Out-of-stock summary
     summary = (
         out_of_stock
             .groupby('Retailer')["Number of Stores"]
@@ -195,15 +195,19 @@ if df is not None:
             .reset_index(name='Number of Situations')
     )
 
-    # --- New: Out-of-Stock Situation Rate 📊 ---
-    # 1. Build a DataFrame of full store counts from config
+    # 2) Warn about any retailers missing from your TOTAL_STORES dict
+    missing = set(summary['Retailer']) - set(TOTAL_STORES.keys())
+    if missing:
+        st.warning(f"Missing total‐store counts for: {', '.join(missing)}")
+
+    # 3) Build a DataFrame of full store counts from config
     total_stores = (
         pd.DataFrame.from_dict(TOTAL_STORES, orient='index', columns=['Total Stores'])
-          .reset_index()
-          .rename(columns={'index': 'Retailer'})
+            .reset_index()
+            .rename(columns={'index': 'Retailer'})
     )
 
-    # 2. Merge with summary and calculate percentage rate
+    # 4) Merge with summary and calculate percentage rate
     summary_rate = (
         summary
             .merge(total_stores, on='Retailer', how='left')
@@ -213,7 +217,7 @@ if df is not None:
             })
     )
 
-    # 3. Display the new rate table
+    # 5) Display the new rate table
     st.markdown(
         "<h3 style='text-align: center;'>Out of Stock Situation Rate 📊</h3>",
         unsafe_allow_html=True
