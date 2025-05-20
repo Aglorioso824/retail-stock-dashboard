@@ -201,11 +201,11 @@ if df is not None:
         with st.expander(f"View {r} Out-of-Stock Stores"):
             st.dataframe(details[details['Retailer'] == r])
 
-    # --- Centered “What is a Situation?” expander just above the Average section ---
+    # --- Centered “What is a Situation? 🤓” expander just above the Average section ---
     cols = st.columns([1, 1, 1])
     # middle column only
     with cols[1]:
-        with st.expander("What is a situation?"):
+        with st.expander("What is a Situation? 🤓"):
             st.write(
                 "An Out of Stock Situation is when any SKU is out of stock. "
                 "It does not refer to the number of stores. For example, there could "
