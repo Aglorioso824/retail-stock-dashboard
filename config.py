@@ -45,14 +45,6 @@ IGNORED_STORES = [
     "CONTACT CENTRE TOOLSTATION",
     "WEBSITE TOOLSTATION",
     "CONTACT CENTRE TOOLSTATION",
-    "WEBSITE TOOLSTATION",
-    "WEBSITE TOOLSTATION",
-    "WEBSITE TOOLSTATION",
-    "WEBSITE TOOLSTATION",
-    # SCREWFIX STORES
-    "WWW.SCREWFIX.COM"
-    "SCREWFIX LIVE"
-    "SCREWFIX.IE"
 ]
 
 # ------------------------------------------------------------------------
