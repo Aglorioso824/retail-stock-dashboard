@@ -183,7 +183,7 @@ if st.button("Load Latest Report from S3"):
 # ------------------------------------------------------------------------
 # 6. Dashboards
 # ------------------------------------------------------------------------
-from config import TOTAL_STORES
+from config import TOTAL_LISTINGS
 import pandas as pd
 
 if df is not None:
@@ -195,14 +195,14 @@ if df is not None:
             .reset_index(name='Number of Situations')
     )
 
-    # 2) Warn about any retailers missing from your TOTAL_STORES dict
-    missing = set(summary['Retailer']) - set(TOTAL_STORES.keys())
+    # 2) Warn about any retailers missing from your TOTAL_LISTINGS dict
+    missing = set(summary['Retailer']) - set(TOTAL_LISTINGS.keys())
     if missing:
-        st.warning(f"Missing total‐store counts for: {', '.join(missing)}")
+        st.warning(f"Missing total‐listing counts for: {', '.join(missing)}")
 
     # 3) Build a DataFrame of full listing counts from config
     total_listings = (
-        pd.DataFrame.from_dict(TOTAL_STORES, orient='index', columns=['Total Listings'])
+        pd.DataFrame.from_dict(TOTAL_LISTINGS, orient='index', columns=['Total Listings'])
             .reset_index()
             .rename(columns={'index': 'Retailer'})
     )
