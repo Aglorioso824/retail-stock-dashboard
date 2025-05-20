@@ -104,7 +104,7 @@ IGNORED_SKUS = [
 
 # TOTAL_LISTINGS maps each Retailer to its total listing count
 TOTAL_LISTINGS = {
-    "Toolstation": 500,
+    "Toolstation": 1650,
     "DID": 15,
 }
 
