@@ -264,7 +264,7 @@ if df is not None:
         st.dataframe(avg_sku)
 
     # Final breakdowns
-    st.markdown("<h3 style='text-align: center;'>Out of Stock (0 units or less) ❌</h3>",
+    st.markdown("<h3 style='text-align: center;'>Out of Stock (0 units) ❌</h3>",
                 unsafe_allow_html=True)
     st.dataframe(out_of_stock)
     st.markdown("<h3 style='text-align: center;'>Critical Stock Levels (1 unit) ⚠️</h3>",
