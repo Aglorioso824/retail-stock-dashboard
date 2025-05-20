@@ -191,9 +191,32 @@ if df is not None:
           .sum()
           .reset_index(name='Number of Situations')
     )
-    st.markdown("<h3 style='text-align: center;'>Out of Stock Situations 😟 (by Retailer)</h3>",
-                unsafe_allow_html=True)
-    st.dataframe(summary)
+
+    # --- New: Out-of-Stock Situation Rate 📊 ---
+    # 1. Compute total stores per retailer
+    total_stores = (
+        df
+          .groupby('Retailer')['Store']
+          .nunique()
+          .reset_index(name='Total Stores')
+    )
+
+    # 2. Merge with summary and calculate percentage rate
+    summary_rate = (
+        summary
+          .merge(total_stores, on='Retailer')
+          .assign(**{
+              'Out of Stock Rate (%)': 
+                  lambda d: (d['Number of Situations'] / d['Total Stores'] * 100).round(1)
+          })
+    )
+
+    # 3. Display the new rate table
+    st.markdown(
+        "<h3 style='text-align: center;'>Out of Stock Situation Rate 📊</h3>",
+        unsafe_allow_html=True
+    )
+    st.dataframe(summary_rate)
 
     # Detailed per-store views
     details = df[df['Quantity'] <= 0][['Retailer', 'Store', 'SKU']]
@@ -203,7 +226,6 @@ if df is not None:
 
     # --- Centered “What is a Situation? 🤓” expander just above the Average section ---
     cols = st.columns([1, 1, 1])
-    # middle column only
     with cols[1]:
         with st.expander("What is a Situation? 🤓"):
             st.write(
