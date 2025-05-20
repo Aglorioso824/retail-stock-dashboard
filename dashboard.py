@@ -7,6 +7,7 @@ from io import BytesIO
 import os
 
 from config import IGNORED_STORES, SKU_MAPPING, IGNORED_SKUS
+from config import TOTAL_STORES
 
 # ------------------------------------------------------------------------
 # 1. S3 setup
