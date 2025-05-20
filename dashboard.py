@@ -183,32 +183,34 @@ if st.button("Load Latest Report from S3"):
 # ------------------------------------------------------------------------
 # 6. Dashboards
 # ------------------------------------------------------------------------
+from config import TOTAL_STORES
+import pandas as pd
+
 if df is not None:
     # Out-of-stock summary
     summary = (
         out_of_stock
-          .groupby('Retailer')['Number of Stores']
-          .sum()
-          .reset_index(name='Number of Situations')
+            .groupby('Retailer')["Number of Stores"]
+            .sum()
+            .reset_index(name='Number of Situations')
     )
 
     # --- New: Out-of-Stock Situation Rate 📊 ---
-    # 1. Compute total stores per retailer
+    # 1. Build a DataFrame of full store counts from config
     total_stores = (
-        df
-          .groupby('Retailer')['Store']
-          .nunique()
-          .reset_index(name='Total Stores')
+        pd.DataFrame.from_dict(TOTAL_STORES, orient='index', columns=['Total Stores'])
+          .reset_index()
+          .rename(columns={'index': 'Retailer'})
     )
 
     # 2. Merge with summary and calculate percentage rate
     summary_rate = (
         summary
-          .merge(total_stores, on='Retailer')
-          .assign(**{
-              'Out of Stock Rate (%)': 
-                  lambda d: (d['Number of Situations'] / d['Total Stores'] * 100).round(1)
-          })
+            .merge(total_stores, on='Retailer', how='left')
+            .assign(**{
+                'Out of Stock Rate (%)':
+                    lambda d: (d['Number of Situations'] / d['Total Stores'] * 100).round(1)
+            })
     )
 
     # 3. Display the new rate table
@@ -240,8 +242,8 @@ if df is not None:
                 unsafe_allow_html=True)
     avg_sku = (
         df.groupby(['Retailer', 'SKU'])
-          .agg(avg_stock=('Quantity','mean'))
-          .reset_index()
+            .agg(avg_stock=('Quantity','mean'))
+            .reset_index()
     )
     sum_avg = (
         avg_sku.groupby('Retailer')['avg_stock']
