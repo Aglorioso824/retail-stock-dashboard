@@ -200,9 +200,9 @@ if df is not None:
     if missing:
         st.warning(f"Missing total‐store counts for: {', '.join(missing)}")
 
-    # 3) Build a DataFrame of full store counts from config
-    total_stores = (
-        pd.DataFrame.from_dict(TOTAL_STORES, orient='index', columns=['Total Stores'])
+    # 3) Build a DataFrame of full listing counts from config
+    total_listings = (
+        pd.DataFrame.from_dict(TOTAL_STORES, orient='index', columns=['Total Listings'])
             .reset_index()
             .rename(columns={'index': 'Retailer'})
     )
@@ -210,10 +210,10 @@ if df is not None:
     # 4) Merge with summary and calculate percentage rate
     summary_rate = (
         summary
-            .merge(total_stores, on='Retailer', how='left')
+            .merge(total_listings, on='Retailer', how='left')
             .assign(**{
                 'Out of Stock Rate (%)':
-                    lambda d: (d['Number of Situations'] / d['Total Stores'] * 100).round(1)
+                    lambda d: (d['Number of Situations'] / d['Total Listings'] * 100).round(1)
             })
     )
 
