@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from io import BytesIO
 import os
 
-from config import IGNORED_STORES, SKU_MAPPING, IGNORED_SKUS, TOTAL_STORES
+from config import IGNORED_STORES, SKU_MAPPING, IGNORED_SKUS, TOTAL_LISTINGS
 
 # ------------------------------------------------------------------------
 # 1. S3 setup
