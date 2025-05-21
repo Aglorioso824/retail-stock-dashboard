@@ -1,4 +1,12 @@
 import streamlit as st
+
+# 0) Password check
+PASSWORD = st.secrets["app_password"]
+entry = st.sidebar.text_input("🔒 Enter app password", type="password")
+if entry != PASSWORD:
+    st.sidebar.error("❌ Incorrect password")
+    st.stop()   # halts the rest of the script
+
 import pandas as pd
 import boto3
 import re
